@@ -11,18 +11,29 @@ import type { SourceArchiveManifest } from './manifest.mts';
 const BLOCK = 512;
 const NAME_MAX = 100;
 
+// Prompt 2 §3: explicit decompression-bomb guards.
+const MAX_TARGET_SIZE = 50 * 1024 * 1024; // 50MB uncompressed
+const MAX_RATIO = 50;
+const MIN_GZ_FOR_RATIO = 512;
+
+
 const FORBIDDEN_NAMES = new Set<string>([
   'node_modules', 'dist', 'coverage', '.vite', '.git', 'build',
   '.nyc_output', '.cache', '.turbo',
 ]);
 const FORBIDDEN_EXTS = new Set<string>(['.tsbuildinfo']);
 
-interface HeaderInfo { readonly name: string; readonly size: number; readonly mode: number; }
+interface HeaderInfo { readonly name: string; readonly size: number; readonly mode: number; readonly typeflag: string; }
 
 function parseOct(buf: Buffer, off: number, len: number): number {
   const s = buf.subarray(off, off + len).toString('ascii').replace(/\u0000/g, '').trim();
   return parseInt(s, 8) || 0;
 }
+
+// Allowed USTAR typeflag values: '0' (regular file) and '5' (directory).
+// All others (symlink='2', hardlink='1', char/block device, fifo, etc.) are rejected
+// with GSPL-ARCHIVE-SYMLINK-ESCAPE — symlink-in-tar is the canonical symlink-escape attack.
+const ALLOWED_TYPEFLAGS = new Set(['0', '5', '\u0000']); // '\u0000' = pre-POSIX regular file
 
 function parseTarHeaders(tar: Buffer): { headers: HeaderInfo[]; errors: string[] } {
   const out: HeaderInfo[] = [];
@@ -33,16 +44,26 @@ function parseTarHeaders(tar: Buffer): { headers: HeaderInfo[]; errors: string[]
     const name = block.subarray(0, NAME_MAX).toString('utf8').replace(/\u0000/g, '');
     if (!name) { errors.push('Empty path at offset ' + off); continue; }
     const size = parseOct(block, 124, 11);
-    out.push({ name: name, size, mode: parseOct(block, 100, 7) });
+    const typeflag = String.fromCharCode(block[156] ?? 0x30);
+    if (!ALLOWED_TYPEFLAGS.has(typeflag)) {
+      errors.push('GSPL-ARCHIVE-SYMLINK-ESCAPE: entry ' + name + ' has typeflag=' + JSON.stringify(typeflag) + ' (only regular file and directory allowed)');
+      continue;
+    }
+    out.push({ name: name, size, mode: parseOct(block, 100, 7), typeflag });
+    // Skip content blocks: advance past Math.ceil(size/BLOCK)*BLOCK bytes of
+    // file data so the next iteration reads the next header (not data zeros).
+    if (size > 0) {
+      off += Math.ceil(size / BLOCK) * BLOCK;
+    }
   }
   return { headers: out, errors };
 }
 
 function pathIsSafe(name: string): { ok: boolean; reason?: string } {
   const BS = String.fromCharCode(92);
-  if (name.startsWith('/') || name.startsWith(BS)) return { ok: false, reason: 'absolute path' };
-  if (/^[A-Za-z]:[\/]/.test(name)) return { ok: false, reason: 'drive-letter path' };
   if (name.startsWith('//') || name.startsWith(BS + BS)) return { ok: false, reason: 'UNC path' };
+  if (/^[A-Za-z]:[\/]/.test(name)) return { ok: false, reason: 'drive-letter path' };
+  if (name.startsWith('/') || name.startsWith(BS)) return { ok: false, reason: 'absolute path' };
   if (name.split('/').some(seg => seg === '..' || seg === '.')) return { ok: false, reason: 'traversal segment' };
   for (const forbidden of FORBIDDEN_NAMES) {
     if (name === forbidden || name.startsWith(forbidden + '/')) return { ok: false, reason: 'forbidden dir: ' + forbidden };
@@ -86,11 +107,20 @@ export function verifyArchiveTarGz(
   }
   const gz = readFileSync(archivePath);
   const archiveBytesActual = 'sha256:' + createHash('sha256').update(gz).digest('hex');
-  let tar: Buffer;    try { tar = gunzipSync(gz); }
+  let tar: Buffer; try { tar = gunzipSync(gz); }
   catch (err) {
     return { ok: false, archiveBytesActual, manifestHashExpected: 'gzip-failed', manifestHashActual: 'gzip-failed', entryCountTar: 0, entryCountManifest: 0, pathViolations: [], parseErrors: ['gzip decompression failed: ' + (err as Error).message], missingArchive: false, missingManifest: false, manifestSchemaOk: false };
   }
+  // §3: parseTarHeaders must be called BEFORE the size/ratio checks because the
+  // size/ratio checks push to `parseErrors` which is declared via destructuring here.
   const { headers, errors: parseErrors } = parseTarHeaders(tar);
+  // §3: decompression-bomb guards (size + ratio) — AFTER parseTarHeaders so parseErrors is in scope
+  if (tar.length > MAX_TARGET_SIZE) {
+    parseErrors.push('GSPL-ARCHIVE-SIZE-LIMIT: uncompressed size ' + tar.length + ' exceeds ' + MAX_TARGET_SIZE);
+  }
+  if (gz.length > MIN_GZ_FOR_RATIO && tar.length / gz.length > MAX_RATIO) {
+    parseErrors.push('GSPL-ARCHIVE-BOMBS: compression ratio ' + Math.round(tar.length / gz.length) + ' exceeds ' + MAX_RATIO);
+  }
   const seenKey = new Set<string>();
   const seenLower = new Set<string>();
   const pathViolations: { path: string; reason: string }[] = [];

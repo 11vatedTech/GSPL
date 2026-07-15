@@ -175,8 +175,8 @@ describe('Production-verifier adversarial tests (Prompt 2 §3)', () => {
     // Patch: add '2' to ALLOWED_TYPEFLAGS so symlinks are accepted.
     const src = readFileSync(originalVerifierPath, 'utf8');
     const patched = src.replace(
-      "new Set(['0', '5', '\u0000'])",
-      "new Set(['0', '5', '\u0000', '2'])",
+      "new Set(['0', '5', '\\u0000'])",
+      "new Set(['0', '5', '\\u0000', '2'])",
     );
     if (patched === src) throw new Error('mutation patch did not match — verifier format may have changed');
     writeFileSync(mutatedVerifierPath, patched, 'utf8');

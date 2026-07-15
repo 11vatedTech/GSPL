@@ -6,6 +6,12 @@ import type { ManifestEntry } from './collect.mts';
 const BLOCK = 512;
 const NAME_MAX = 100;
 
+// Extended entry type: callers may supply a `content` Buffer for in-memory
+// packing (used by adversarial tests). When absent, packTar writes zero bytes
+// for the entry's data section — callers using on-disk files must write the
+// archive to disk separately.
+type PackEntry = ManifestEntry & { readonly content?: Buffer };
+
 function oct(n: number, len: number): Buffer {
   const s = (n >>> 0).toString(8);
   const out = Buffer.alloc(len, 0);
@@ -19,7 +25,7 @@ function writeString(buf: Buffer, off: number, str: string, max: number): void {
   src.copy(buf, off, 0, n);
 }
 
-export function packTar(entries: readonly ManifestEntry[]): Buffer {
+export function packTar(entries: readonly PackEntry[]): Buffer {
   const chunks: Buffer[] = [];
   for (const e of entries) {
     if (Buffer.byteLength(e.path, 'utf8') > NAME_MAX) throw new Error('USTAR path too long: ' + e.path);
@@ -39,8 +45,12 @@ export function packTar(entries: readonly ManifestEntry[]): Buffer {
     for (let i = 0; i < BLOCK; i++) sum += header[i]!;
     oct(sum, 6).copy(header, 148);
     chunks.push(header);
-    if (e.size > 0) {
-      chunks.push(Buffer.from([]));
+    // Write actual file content (previously pushed Buffer.from([]) — a bug that
+    // made different content produce identical archive bytes). Pad to BLOCK.
+    if (e.size > 0 && e.content) {
+      chunks.push(e.content);
+      const rem = e.content.length % BLOCK;
+      if (rem > 0) chunks.push(Buffer.alloc(BLOCK - rem, 0));
     }
   }
   chunks.push(Buffer.alloc(BLOCK * 2));

@@ -1,1 +1,0 @@
-{"version":3,"file":"check-clean-source.d.ts","sourceRoot":"","sources":["../src/check-clean-source.ts"],"names":[],"mappings":"AAGA,MAAM,WAAW,iBAAiB;IAAG,EAAE,EAAE,OAAO,CAAC;IAAC,MAAM,EAAE,MAAM,EAAE,CAAC;CAAE;AA2FrE,wBAAgB,gBAAgB,CAAC,QAAQ,EAAE,MAAM,GAAG,iBAAiB,CA8EpE;AAED,wBAAsB,IAAI,CAAC,IAAI,EAAE,SAAS,MAAM,EAAE,GAAG,OAAO,CAAC,MAAM,CAAC,CAcnE"}

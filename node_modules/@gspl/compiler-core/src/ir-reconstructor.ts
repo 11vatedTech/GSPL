@@ -49,17 +49,14 @@ function findMetaNode(
   return undefined;
 }
 
-function extractGeneName(nodeId: string, attrs?: IrReconstructableNode["attributes"]): string {
-  const p = nodeId.split(":");
-  return p.length >= 3 && p[0] === "n" ? p[2]! : (attrs && attrs.geneName) || "unknown";
-}
-
 export function reconstructSeedFromIr(graph: GsplIrGraph, ctx: ReconstructionContext): IrReconstructionResult {
   const errors: string[] = [];
   const reg: GeneTypeRegistry = ctx.geneRegistry;
   const ref = graph.nodes as ReadonlyMap<string, IrReconstructableNode>;
-  const seedSchema: string = ((findMetaNode(ref, "schema")?.value as { schema?: string } | undefined)?.schema) ?? "gspl.canonical-seed";
-  const seedSchemaVersion: string = ((findMetaNode(ref, "schema")?.value as { schemaVersion?: string } | undefined)?.schemaVersion) ?? "1.0";
+  // Inferred literal type (no `: string` annotation) to satisfy the strict
+  // `gspl.canonical-seed` literal type expected by `makePrimordialSeed.schema`.
+  const seedSchema = ((findMetaNode(ref, "schema")?.value as { schema?: string } | undefined)?.schema) ?? "gspl.canonical-seed";
+  const seedSchemaVersion = ((findMetaNode(ref, "schema")?.value as { schemaVersion?: string } | undefined)?.schemaVersion) ?? "1.0";
 
   const identityNode = findMetaNode(ref, "identity");
   const identityOverrides: Partial<CanonicalSeed["identity"]> = {};
@@ -86,33 +83,76 @@ export function reconstructSeedFromIr(graph: GsplIrGraph, ctx: ReconstructionCon
   const intent: CanonicalSeed["intent"] = (intentNode?.value as CanonicalSeed["intent"] | undefined) ?? INTENT_PRIMORDIAL_DEFAULT;
 
   const geneGroups = new Map<string, { fragments: IrReconstructableNode[]; confidence?: number }>();
+  // Whitelist of fragment `kind` values produced by registered descriptors and
+  // by the meta-section extension path. Unknown kinds are skipped so a
+  // pointer-malformed id cannot slip into geneGroups.
+  const KNOWN_KINDS = new Set(["gene", "value", "struct", "array", "graph", "extension"]);
   ref.forEach((node) => {
-    const gn = extractGeneName(node.id, node.attributes);
-    if (gn === "unknown" || gn === "seed-root" || (node.attributes && node.attributes.section)) return;
-    const existing = geneGroups.get(gn);
-    if (existing) existing.fragments.push(node);
-    else geneGroups.set(gn, { fragments: [node], confidence: node.attributes?.confidence });
+    if (node.attributes && node.attributes.section) return; // skip meta-extension nodes (have section attribute)
+    const parts = node.id.split(":");
+    if (parts.length < 5 || parts[0] !== "n") return;
+    // Canonical IR id pattern: n:<seedId>:<geneName>:<kind>:<idx>.
+    // CRITICAL: seedId itself may contain ':' — e.g. when post-stage 1
+    // `computeSeedHash` writes `identity.contentId = 'sha256:<hex>'`, the
+    // pipeline encodes that as the seedId prefix. Using fixed-offset
+    // parts[2] mis-parses to the SHA-256 hex segment, producing a phantom
+    // gene entry like `genes['799054d6...']` (the bug surfaced in the
+    // canonicalization.test.ts reset). GeneName sits at parts[len-3],
+    // kind at len-2, idx at len-1; we validate both anchors so a colons-in-
+    // geneName collision cannot regress this path.
+    const idxStr = parts[parts.length - 1];
+    if (!/^\d+$/.test(idxStr)) return;
+    const kind = parts[parts.length - 2];
+    if (!KNOWN_KINDS.has(kind)) return;
+    const geneName = parts[parts.length - 3];
+    // §5 byte-equal round-trip filter — only TOP-LEVEL gene fragments are
+    // reconstructed as standalone genes. Field/child fragments produced by
+    // struct/array/graph lowering have geneName containing '.' (e.g.
+    // 'module-structure.endpoints') — they belong to their parent's verbatim
+    // value and must NOT be promoted to phantom genes with type='unknown'
+    // and value=null.
+    if (geneName.includes(".")) return;
+    // A top-level gene entry is either the gene envelope (kind='gene') or
+    // a fundamental-value-kind fragment whose declared type is registered
+    // (e.g. 'scalar', 'symbolic', 'expression', 'regulatory'). This
+    // matches every Descriptor emitted by core-gene-protocol/src/defaults.ts.
+    const isGeneEnvelope = node.kind === "gene";
+    const isRegisteredKind = node.type !== undefined && reg.has(node.type);
+    if (!isGeneEnvelope && !isRegisteredKind) return;
+    const existing = geneGroups.get(geneName);
+    if (existing) {
+      existing.fragments.push(node);
+      if (existing.confidence === undefined && node.attributes && node.attributes.confidence !== undefined) {
+        existing.confidence = node.attributes.confidence as number;
+      }
+    } else {
+      geneGroups.set(geneName, {
+        fragments: [node],
+        confidence: node.attributes?.confidence as number | undefined,
+      });
+    }
   });
 
   const genes: Record<string, { type: string; value: unknown; confidence?: number }> = {};
   geneGroups.forEach((group, geneName) => {
     const geneNode = group.fragments.find((f) => f.kind === "gene" || (!!f.type && reg.has(f.type)));
     const typeId: string = (geneNode?.type) ?? (group.fragments[0]?.type) ?? "unknown";
-    const desc = reg.get(typeId);
-    if (desc && desc.liftFromIr) {
-      try {
-        const lifted = desc.liftFromIr(group.fragments as unknown as Parameters<NonNullable<typeof desc.liftFromIr>>[0], {
-          seedId: "reconstructed", geneName,
-          resolveGeneValue: (_tid: string, _ids: string[]) => null,
-        });
-        genes[geneName] = { type: typeId, value: lifted, confidence: group.confidence };
-      } catch (e) {
-        errors.push("Lift error " + geneName + ": " + String(e));
-        genes[geneName] = { type: typeId, value: geneNode?.value ?? null, confidence: group.confidence };
-      }
-    } else {
-      genes[geneName] = { type: typeId, value: geneNode?.value ?? null, confidence: group.confidence };
-    }
+    // §5 byte-equal round-trip: bypass descriptor.liftFromIr entirely. The
+    // lowering process (stageSeedToIr / descriptor.lowerToIr) already injects
+    // the pristine, unmutated gene.value into the kind='gene' fragment's
+    // .value property. liftFromIr reconstructs via Map iteration, which loses
+    // array-element order for graph/array genes and silently fills default
+    // fields for struct genes — both of which break JCS byte equality since
+    // JCS sorts object keys but preserves array order.
+    // We therefore trust the verbatim geneNode.value as the canonical
+    // reconstruction. descriptor.liftFromIr remains defined but is unused by
+    // §5 reconstruction; downstream round-trip-restricted code paths may opt
+    // into it when only semantic (hash) equality is required.
+    genes[geneName] = {
+      type: typeId,
+      value: geneNode?.value ?? null,
+      confidence: group.confidence,
+    };
   });
 
   const readMeta = (s: string): unknown => findMetaNode(ref, s)?.value;
@@ -137,12 +177,19 @@ export function reconstructSeedFromIr(graph: GsplIrGraph, ctx: ReconstructionCon
   const validationReqs = readMeta("validationRequirements") as CanonicalSeed["validationRequirements"] | undefined;
   const compatReqs = readMeta("compatibilityRequirements") as CanonicalSeed["compatibilityRequirements"] | undefined;
 
+  // §5 byte-equal round-trip — conditional spread for optional fields. Passing
+  // `validationRequirements: undefined` would set the key to undefined on the
+  // created seed (Object.keys then includes it) and produce a different
+  // canonical byte sequence vs. an original seed that simply does not have the
+  // key. Spreading only when the IR carries a value matches the original
+  // canonical form byte-for-byte.
   const seed = makePrimordialSeed({
-    schema: seedSchema, schemaVersion: seedSchemaVersion,
+    schema: seedSchema as "gspl.canonical-seed", schemaVersion: seedSchemaVersion,
     namespace, domainProfile, intent,
     payload: { schemaVersion: "1.0", genes },
     constraints, dependencies, entropy, lineage, provenance, resourceBudget, effectPermissions,
-    validationRequirements: validationReqs, compatibilityRequirements: compatReqs,
+    ...(validationReqs !== undefined ? { validationRequirements: validationReqs } : {}),
+    ...(compatReqs !== undefined ? { compatibilityRequirements: compatReqs } : {}),
   });
   // §5: identity overrides MUST be merged into `seed.identity`, NOT spread at the
   // top level of the overrides argument to makePrimordialSeed. `makePrimordialSeed`

@@ -9,6 +9,6 @@
   "scripts": { "build": "tsc", "typecheck": "tsc --noEmit", "test": "vitest run" },
   "license": "MIT",
   "engines": { "node": ">=20.0.0" },
-  "dependencies": { "@gspl/canon-foundation": "*", "@gspl/seed-format": "*", "@gspl/ir-model": "*", "@gspl/gene-protocol": "*" },
+  "dependencies": { "@gspl/canon-foundation": "*", "@gspl/seed-format": "*", "@gspl/ir-model": "*", "@gspl/gene-protocol": "*", "@gspl/package-resolver": "*" },
   "devDependencies": { "vitest": "^2.0.0" }
 }

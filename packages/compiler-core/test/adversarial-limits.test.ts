@@ -81,16 +81,21 @@ describe("Adversarial Resource Limits", function() {
     expect(result.ok).toBe(false);
   });
 
+  // §16 — NaN is explicitly forbidden by canon-foundation's JCS serializer.
+  // Verify the throw propagates so callers can pre-detect malformed scalars.
   it("rejects NaN values", function() {
     var s = makePrimordialSeed({ payload: { schemaVersion: "1.0", genes: { x: { type: "scalar", value: NaN } } } });
-    var bytes = canonicalizeSeed(s);
-    var len = bytes.length;
-    expect(len).toBeGreaterThan(0);
+    var threw = false;
+    try { canonicalizeSeed(s); } catch { threw = true; }
+    expect(threw).toBe(true);
   });
 
+  // §15 — empty seed is a closure-critical fail: the verifier emits
+  // GSPL-PIPE-EMPTY-IR; an empty seed is NOT a successful pipeline run.
   it("handles empty seed safely", function() {
     var s = makePrimordialSeed({ payload: { schemaVersion: "1.0", genes: {} } });
     var result = runPipeline(createCompilerContext(), s);
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBe(false);
+    expect(result.session.diagnostics.some(function(d) { return d.code === "GSPL-PIPE-EMPTY-IR"; })).toBe(true);
   });
 });

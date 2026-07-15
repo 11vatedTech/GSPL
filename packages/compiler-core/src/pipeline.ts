@@ -1,7 +1,7 @@
 /** 5-layer pipeline — Prompt 2 §4, §8-13 */
 
 import type { CanonicalSeed } from '@gspl/seed-format';
-import { normalizeSeed, computeSeedHash, canonicalizeSeed } from '@gspl/seed-format';
+import { normalizeSeed, computeSeedHash, canonicalizeSeed, makePrimordialSeed } from '@gspl/seed-format';
 import type { GsplIrGraph, GsplIrNode, GsplIrEdge, IrNormalizedGraph, Diagnostic, ProvenanceRecord, ProvenanceChain } from '@gspl/ir-model';
 import { createIrGraph, addNode, addEdge, normalizeGraph, validateGraphStructure } from '@gspl/ir-model';
 import { createStandardGeneRegistry } from '@gspl/gene-protocol';
@@ -124,9 +124,17 @@ export function runPipeline(ctx: CompilerContext, seed: CanonicalSeed): Pipeline
 // ── Stage 1: Authoring → Seed ──
 
 export function stageAuthoringToSeed(session: CompilerSession): void {
-  // Normalize the seed using JCS-based canonicalization
+  // §5 lowering-side canonicalization. Order matters:
+  //   1. normalizeSeed parses JCS bytes back to a plain object with all declared
+  //      fields. Keys are lexically sorted; undefined values are dropped.
+  //   2. makePrimordialSeed is re-applied to populate ALL nested defaults (e.g.
+  //      dependencies.targetContracts, intent.architecturePatterns). Without this
+  //      step, reconstructSeedFromIr can't round-trip seeds whose original author
+  //      relied on default-populated nested fields.
+  //   3. contentId is set AFTER re-population so the hash is computed against
+  //      the canonical, fully-populated form.
   session.normalizedSeed = normalizeSeed(session.seed);
-  // Compute and set the content hash
+  session.normalizedSeed = makePrimordialSeed(session.normalizedSeed);
   session.normalizedSeed.identity.contentId = computeSeedHash(session.normalizedSeed);
 }
 
@@ -162,9 +170,14 @@ export function stageSeedToIr(session: CompilerSession): SeedToIrResult {
           diags.push({ code: 'GSPL-LIMIT-NODES', severity: 'error', category: 'RESOURCE', message: 'Max node count exceeded' });
           break;
         }
+        // §5/§11: gene confidence is gene-level metadata (not gene-value content).
+        // Storing it on each fragment's attributes preserves it across the IR round-trip
+        // so the reconstructed seed bytes match the original canonical-form bytes.
+        const attrsWithConfidence: Record<string, unknown> = { ...(frag.attributes ?? {}) };
+        if (gene.confidence !== undefined) attrsWithConfidence.confidence = gene.confidence;
         addNode(graph, {
           id: frag.id, kind: frag.kind as GsplIrNode['kind'], type: frag.type,
-          value: frag.value, attributes: frag.attributes,
+          value: frag.value, attributes: attrsWithConfidence,
           provenance: frag.provenance as ProvenanceChain,
         });
         provs.push({ id: `prov:${frag.id}`, chain: frag.provenance as ProvenanceChain, producedEntity: { type: 'node', id: frag.id }, consumedEntities: [] });

@@ -19,16 +19,18 @@ describe("Cross-Process Determinism",function(){
 
   it("all three fixtures produce nonempty pipeline output",function(){
     var fixtures = [fixtureSoftwareArchitecture, fixtureInteractiveScene, fixtureMixedVideoGame];
-    
+    var fixtureNames = ["software-architecture", "interactive-scene", "mixed-video-game"];
+
     for(var i=0;i<fixtures.length;i++){
       var seed=fixtures[i];
+      var label = fixtureNames[i];
       var r=runPipeline(createCompilerContext(),seed);
-      expect(r.session.ir, names[i] + " IR").toBeDefined();
-      expect(r.session.ir.nodes.size, names[i] + " IR nodes").toBeGreaterThan(0);
-      expect(r.session.plan, names[i] + " plan").toBeDefined();
-      expect(r.session.plan.operations.length, names[i] + " ops").toBeGreaterThan(0);
-      expect(r.session.artifactGraph, names[i] + " artifacts").toBeDefined();
-      expect(r.session.artifactGraph.artifacts.length, names[i] + " artifacts count").toBeGreaterThan(0);
+      expect(r.session.ir, label + " IR").toBeDefined();
+      expect(r.session.ir.nodes.size, label + " IR nodes").toBeGreaterThan(0);
+      expect(r.session.plan, label + " plan").toBeDefined();
+      expect(r.session.plan.operations.length, label + " ops").toBeGreaterThan(0);
+      expect(r.session.artifactGraph, label + " artifacts").toBeDefined();
+      expect(r.session.artifactGraph.artifacts.length, label + " artifacts count").toBeGreaterThan(0);
     }
   });
 

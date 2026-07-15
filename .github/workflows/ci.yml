@@ -12,15 +12,47 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node }}
+      - name: Pin npm version
+        run: npm i -g npm@10
       - run: npm ci
-      - run: npm run typecheck
+      - run: npm run typecheck:all
       - run: npm run build
       - run: npm test
       - run: npm run test:property
       - run: npm run test:fuzz:ci
-      - run: npm run test:mutation
+      - run: npm run test:mutation:ci
+      - run: npm run fixtures:generate
       - run: npm run check:roundtrip
+      - run: npm run check:restart-reconstruction
       - run: npm run check:packages
       - run: npm run check:determinism
       - run: npm run check:conformance
+      - run: npm run check:clean-source
       - run: npm run validate
+      - run: npm run package:source
+      - run: npm run check:source-archive
+      - name: Upload canonical hash manifest
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gspl-canonical-${{ matrix.os }}-node${{ matrix.node }}
+          path: artifacts/validation/
+
+  hash-compare:
+    needs: build
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all canonical hash manifests
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/validation/
+      - name: Fail if canonical hashes differ across matrix
+        run: |
+          if [ "$(find artifacts/validation -name '*.json' -exec sha256sum {} \; 2>/dev/null | awk '{print $1}' | sort -u | wc -l)" -gt 1 ]; then
+            echo "::error::canonical hash manifest differs across OS/Node combinations";
+            exit 1;
+          else
+            echo "canonical hash manifest is identical across all matrix jobs";
+          fi

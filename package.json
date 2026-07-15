@@ -48,6 +48,7 @@
     "check:roundtrip": "vitest run packages/compiler-core/test/canonicalization.test.ts",
 
     "check:packages": "vitest run packages/package-resolver/test/",
+    "check:restart-reconstruction": "vitest run packages/compiler-core/test/cross-process.test.ts",
     "check:conformance": "vitest run packages/compiler-core/test/canonicalization.test.ts",
 
     "typecheck:all": "tsc --noEmit -p ."

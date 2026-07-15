@@ -47,7 +47,10 @@ export function packTar(entries: readonly PackEntry[]): Buffer {
     chunks.push(header);
     // Write actual file content (previously pushed Buffer.from([]) — a bug that
     // made different content produce identical archive bytes). Pad to BLOCK.
-    if (e.size > 0 && e.content) {
+    // Throw on size > 0 but missing content: silent drop is a footgun for callers
+    // that set size from a manifest but forget to supply the content buffer.
+    if (e.size > 0) {
+      if (!e.content) throw new Error('packTar: entry ' + e.path + ' has size=' + e.size + ' but no content Buffer');
       chunks.push(e.content);
       const rem = e.content.length % BLOCK;
       if (rem > 0) chunks.push(Buffer.alloc(BLOCK - rem, 0));

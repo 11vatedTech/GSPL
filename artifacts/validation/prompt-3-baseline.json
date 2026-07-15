@@ -1,0 +1,21 @@
+{
+  "schema": "gspl.prompt-3-baseline",
+  "schemaVersion": "1.0",
+  "branch": "feature/prompt-3-textual-frontend",
+  "baselineCommit": "570b0645487f7eb12dbf1567e65e03faa49d76a3",
+  "preflight": {
+    "npm_ci": "passed",
+    "typecheck_all": "passed (0 errors)",
+    "build": "passed",
+    "test": "passed (2 files, 25 tests)",
+    "check_roundtrip": "passed",
+    "check_restart_reconstruction": "passed (5 fixtures, hashes match)",
+    "check_tracked_source": "passed (0 violations)"
+  },
+  "prompt2_deferred": [
+    "github_actions_matrix",
+    "cross_platform_archive_byte_equality",
+    "branch_protection",
+    "pr_open_requires_gh_auth"
+  ]
+}

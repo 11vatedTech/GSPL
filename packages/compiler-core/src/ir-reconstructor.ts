@@ -39,10 +39,12 @@ export type ReconstructDiagnosticCode =
   | "GSPL-RECONSTRUCT-UNKNOWN-KIND"
   | "GSPL-RECONSTRUCT-UNKNOWN-GENE-TYPE"
   | "GSPL-RECONSTRUCT-LIMIT-EXCEEDED"
-  | "GSPL-RECONSTRUCT-INCOMPLETE-IDENTITY";
+  | "GSPL-RECONSTRUCT-INCOMPLETE-IDENTITY"
+  | "GSPL-RECONSTRUCT-PACKAGE-LOCK-MISMATCH"
+  | "GSPL-RECONSTRUCT-HASH-MISMATCH";
 export type ReconstructDiagnosticSeverity = "error" | "warning";
 export type ReconstructDiagnosticCategory =
-  | "GRAPH" | "TYPE" | "IDENTITY" | "LIMITS" | "CONSTRAINT" | "INTERNAL";
+  | "GRAPH" | "TYPE" | "IDENTITY" | "LIMITS" | "CONSTRAINT" | "INTERNAL" | "HASH" | "LOCK";
 export interface ReconstructDiagnostic {
   readonly code: ReconstructDiagnosticCode;
   readonly severity: ReconstructDiagnosticSeverity;
@@ -63,7 +65,9 @@ function makeReconstructDiagnostic(
     code === "GSPL-RECONSTRUCT-UNKNOWN-GENE-TYPE" ? "TYPE" :
     code === "GSPL-RECONSTRUCT-INCOMPLETE-IDENTITY" ? "IDENTITY" :
     code === "GSPL-RECONSTRUCT-LIMIT-EXCEEDED" ? "LIMITS" :
-    code === "GSPL-RECONSTRUCT-MISSING-SECTION" ? "CONSTRAINT" : "INTERNAL";
+    code === "GSPL-RECONSTRUCT-MISSING-SECTION" ? "CONSTRAINT" :
+    code === "GSPL-RECONSTRUCT-PACKAGE-LOCK-MISMATCH" ? "LOCK" :
+    code === "GSPL-RECONSTRUCT-HASH-MISMATCH" ? "HASH" : "INTERNAL";
   return { code, severity, category, message, detail, path };
 }
 

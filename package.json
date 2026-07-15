@@ -37,6 +37,9 @@
     "package:source": "node --experimental-strip-types scripts/source-package/cli.mts .",
     "check:source-archive": "node --experimental-strip-types scripts/source-package/verify.mts build/gspl-canon-source.tar.gz build/gspl-canon-source-manifest.json",
 
+    "write:canonical-manifest": "node --experimental-strip-types scripts/write-canonical-manifest.mts .",
+    "compare:canonical-manifests": "node --experimental-strip-types scripts/compare-canonical-manifests.mts",
+
     "test:property": "vitest run packages/compiler-core/test/property.test.ts",
     "test:fuzz": "vitest run packages/compiler-core/test/sabotage.test.ts packages/compiler-core/test/mutation.test.ts",
     "test:mutation": "vitest run packages/compiler-core/test/mutation.test.ts packages/compiler-core/test/sabotage.test.ts",
@@ -48,7 +51,7 @@
     "check:roundtrip": "vitest run packages/compiler-core/test/canonicalization.test.ts",
 
     "check:packages": "vitest run packages/package-resolver/test/",
-    "check:restart-reconstruction": "vitest run packages/compiler-core/test/cross-process.test.ts",
+    "check:restart-reconstruction": "node --experimental-strip-types scripts/restart-reconstruction.mts",
     "check:conformance": "vitest run packages/compiler-core/test/canonicalization.test.ts",
 
     "typecheck:all": "tsc --noEmit -p ."

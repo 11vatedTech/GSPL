@@ -139,3 +139,84 @@ export const fixtureMixedVideoGame: CanonicalSeed = makePrimordialSeed({
     }],
   },
 });
+
+/**
+ * Fixture D — Package-Backed Seed
+ *
+ * Represents a seed whose canonical output depends on resolved package
+ * coordinates. Includes a context reference and a rule-set reference that
+ * canonicalize as part of `dependencies.contextRefs/ruleSetRefs`.
+ */
+export const fixturePackageBacked: CanonicalSeed = makePrimordialSeed({
+  namespace: { domain: 'com.11vatedtech.fixtures', name: 'package-backed', title: 'Package-Backed Reference Fixture' },
+  domainProfile: {
+    domainId: 'package-backed',
+    requiredCapabilities: ['package-resolution', 'rule-evaluation'],
+    optionalCapabilities: ['context-injection'],
+  },
+  intent: {
+    purpose: 'Demonstrate GSPL canonical representation of a seed whose compilation depends on resolved context + rule package coordinates; lockfile hash is reproducible and part of per-fixture canonical output.',
+    nonGoals: ['Networked package mirrors', 'Mutable package registries'],
+  },
+  payload: {
+    schemaVersion: '1.0',
+    genes: {
+      'rule-pack': { type: 'regulatory', value: { sources: ['naming:camelCase', 'safety:no-any'], strictness: 'loud' }, confidence: 0.9 },
+      'context-snapshot': { type: 'struct', value: { contextId: 'gspl-default-context', providedFields: ['CapabilityResolver', 'ConstraintEvaluator', 'EffectAuthorizer'] }, confidence: 0.85 },
+    },
+  },
+  dependencies: {
+    contextRefs: [{ packageId: '@gspl/default-context', version: '^1.0.0', contentHash: 'sha256:fixture-default-context-v1' }],
+    knowledgeRefs: [],
+    ruleSetRefs: [{ packageId: '@gspl/strict-rule-pack', version: '^1.0.0', contentHash: 'sha256:fixture-strict-rule-pack-v1' }],
+    targetContracts: [{
+      targetId: 'package-locked-output',
+      targetType: 'composite',
+      requiredCapabilities: ['package-resolution', 'rule-evaluation'],
+      outputEquivalence: 'STRUCTURALLY_IDENTICAL',
+    }],
+  },
+});
+
+/**
+ * Fixture E — Gene-Extension Seed
+ *
+ * Represents a seed whose canonical output exercises gene-extension metadata
+ * paths: optional `validationRequirements` + `compatibilityRequirements`
+ * fields that appear on the canonical form only when explicitly declared.
+ */
+export const fixtureGeneExtension: CanonicalSeed = makePrimordialSeed({
+  namespace: { domain: 'com.11vatedtech.fixtures', name: 'gene-extension', title: 'Gene-Extension Metadata Reference Fixture' },
+  domainProfile: {
+    domainId: 'gene-extension',
+    requiredCapabilities: ['semantic-validation'],
+    optionalCapabilities: ['schema-migration'],
+  },
+  intent: {
+    purpose: 'Demonstrate GSPL canonical representation of a seed carrying validationRequirements + compatibilityRequirements blocks; verifies §5 byte-equal round-trip on conditionally-spread optional canonical fields.',
+    nonGoals: ['Mass migration tooling', 'Networked registry access'],
+  },
+  payload: {
+    schemaVersion: '1.0',
+    genes: {
+      'extension-expression': { type: 'expression', value: 'capability = "semantic-validation" AND presence = "required"', confidence: 0.95 },
+      'extension-contract': { type: 'regulatory', value: { mustDeclare: ['validate()'], optionalInherits: ['migrate() inherits type'] }, confidence: 0.9 },
+    },
+  },
+  dependencies: {
+    contextRefs: [],
+    knowledgeRefs: [],
+    ruleSetRefs: [],
+    targetContracts: [{
+      targetId: 'extension-metadata-output',
+      targetType: 'composite',
+      requiredCapabilities: ['semantic-validation'],
+      outputEquivalence: 'STRUCTURALLY_IDENTICAL',
+    }],
+  },
+  validationRequirements: ['GSPL-VAL-SCHEMA-1.0', 'GSPL-VAL-INVARIANT-CANONICAL'],
+  compatibilityRequirements: [
+    { requirement: 'minCompilerVersion', version: '0.1.0', operator: '>=' },
+    { requirement: 'minCanonVersion', version: '1.0', operator: '>=' },
+  ],
+});

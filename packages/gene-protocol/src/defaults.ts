@@ -28,17 +28,22 @@ function mkDesc(typeId: string, classification: GeneTypeDescriptor['classificati
   };
 }
 
-export const SCALAR_DESCRIPTOR: GeneTypeDescriptor<number> = {
+// Variance note: `GeneTypeDescriptor<T>` is invariant in T because
+// `canonicalize(v: T)` and `validate(v: T)` place T in contravariant position,
+// so `GeneTypeDescriptor<unknown>` and `GeneTypeDescriptor<number>` are not
+// subtypes. Per thinker recommendation A1, individual descriptors are
+// specialized UNIFORMLY as plain `GeneTypeDescriptor`. The public registry
+// flattens to one shape anyway.
+export const SCALAR_DESCRIPTOR: GeneTypeDescriptor = {
   ...mkDesc('scalar', 'FUNDAMENTAL_VALUE_KIND', 'Continuous numeric value', 0),
   valueSchema: { type: 'number' },
-  canonicalize: ((v: number) => canonicalizeAny(v)) as GeneTypeDescriptor<number>['canonicalize'],
-  validate: ((v: unknown) => typeof v === 'number' && Number.isFinite(v) ? ok() : { ok: false, errors: [{ code: 'GSPL-GENE-001', message: 'Not a finite number' }] }) as GeneTypeDescriptor<number>['validate'],
-  normalize: ((v: number) => v) as GeneTypeDescriptor<number>['normalize'],
-  composition: { compose: (a: number, b: number) => a + b, identity: 0, associative: true },
+  validate: ((v: unknown) => typeof v === 'number' && Number.isFinite(v) ? ok() : { ok: false, errors: [{ code: 'GSPL-GENE-001', message: 'Not a finite number' }] }) as GeneTypeDescriptor['validate'],
+  composition: { compose: (a, b) => (a as number) + (b as number), identity: 0, associative: true },
   merge: { merge: (_b: number, i: number) => i, strategy: 'incoming-wins' },
-  diff: { diff: (a: number, b: number) => ({ changed: a !== b, patches: a !== b ? [{ op: 'replace' as const, path: '', value: b }] : [] }) },
+  diff: { diff: (a, b) => ({ changed: a !== b, patches: a !== b ? [{ op: 'replace' as const, path: '', value: b }] : [] }) },
   optionalCapabilities: ['mutation', 'crossover', 'distance', 'interpolation', 'sampling', 'evolution'],
   resourceEstimate: est(8),
+  normalize: undefined,
 };
 
 export const CATEGORICAL_DESCRIPTOR = mkDesc('categorical', 'FUNDAMENTAL_VALUE_KIND', 'Discrete label', '');
@@ -50,8 +55,8 @@ export const EXPRESSION_DESCRIPTOR = mkDesc('expression', 'OPERATOR_OR_RULE', 'D
 export const REGULATORY_DESCRIPTOR = mkDesc('regulatory', 'OPERATOR_OR_RULE', 'Conditional logic', null);
 export const TOPOLOGY_DESCRIPTOR = mkDesc('topology', 'GRAPH_STRUCTURE', 'Manifold properties', null);
 
-export const STRUCT_DESCRIPTOR: GeneTypeDescriptor<Record<string, unknown>> = {
-  ...mkDesc('struct', 'COMPOSITE_STRUCTURE', 'Composite named fields', {}) as GeneTypeDescriptor<Record<string, unknown>>,
+export const STRUCT_DESCRIPTOR: GeneTypeDescriptor = {
+  ...mkDesc('struct', 'COMPOSITE_STRUCTURE', 'Composite named fields', {}),
   lowerToIr: (value, ctx) => {
     const fragments: GeneIrFragment[] = [];
     if (typeof value !== 'object' || value === null || Array.isArray(value)) return fragments;
@@ -62,22 +67,24 @@ export const STRUCT_DESCRIPTOR: GeneTypeDescriptor<Record<string, unknown>> = {
     }
     return fragments;
   },
-  liftFromIr: (nodes) => { const r: Record<string, unknown> = {}; for (const n of nodes) { if (typeof n.attributes?.fieldName === 'string') r[n.attributes.fieldName] = n.value; } return Object.keys(r).length > 0 ? r : {}; },
+  liftFromIr: ((nodes: GeneIrFragment[]) => { const r: Record<string, unknown> = {}; for (const n of nodes) { if (typeof n.attributes?.fieldName === 'string') r[n.attributes.fieldName] = n.value; } return Object.keys(r).length > 0 ? r : {}; }) as GeneTypeDescriptor['liftFromIr'],
+  normalize: undefined,
 };
 
-export const ARRAY_DESCRIPTOR: GeneTypeDescriptor<unknown[]> = {
-  ...mkDesc('array', 'COMPOSITE_STRUCTURE', 'Homogeneous collection', []) as GeneTypeDescriptor<unknown[]>,
+export const ARRAY_DESCRIPTOR: GeneTypeDescriptor = {
+  ...mkDesc('array', 'COMPOSITE_STRUCTURE', 'Homogeneous collection', []),
   lowerToIr: (value, ctx) => {
     const fragments: GeneIrFragment[] = [];
     if (!Array.isArray(value)) return fragments;
     fragments.push({ id: nid(ctx.seedId, ctx.geneName, ctx.nodeCounter.next(), 'array'), kind: 'gene', type: 'array', value, attributes: { length: value.length }, provenance: { source: 'seed', originId: ctx.geneName } });
     return fragments;
   },
-  liftFromIr: (nodes) => { for (const n of nodes) { if (Array.isArray(n.value)) return n.value; } return []; },
+  liftFromIr: ((nodes: GeneIrFragment[]) => { for (const n of nodes) { if (Array.isArray(n.value)) return n.value; } return []; }) as GeneTypeDescriptor['liftFromIr'],
+  normalize: undefined,
 };
 
-export const GRAPH_DESCRIPTOR: GeneTypeDescriptor<{ nodes?: string[]; edges?: [string, string, string][] }> = {
-  ...mkDesc('graph', 'GRAPH_STRUCTURE', 'Node/edge graph', {}) as GeneTypeDescriptor<{ nodes?: string[]; edges?: [string, string, string][] }>,
+export const GRAPH_DESCRIPTOR: GeneTypeDescriptor = {
+  ...mkDesc('graph', 'GRAPH_STRUCTURE', 'Node/edge graph', {}),
   lowerToIr: (value, ctx) => {
     const fragments: GeneIrFragment[] = [];
     if (typeof value !== 'object' || value === null) return fragments;
@@ -87,28 +94,72 @@ export const GRAPH_DESCRIPTOR: GeneTypeDescriptor<{ nodes?: string[]; edges?: [s
     if (g.edges) for (const [from, kind, to] of g.edges) fragments.push({ id: nid(ctx.seedId, ctx.geneName + '.edge', ctx.nodeCounter.next(), 'graph-edge'), kind: 'value', type: 'symbolic', value: { from, kind, to }, attributes: { edgeKind: kind }, provenance: { source: 'seed', originId: ctx.geneName } });
     return fragments;
   },
-  liftFromIr: (nodes) => {
-    const r: { nodes?: string[]; edges?: [string, string, string][] } = {};
-    for (const n of nodes) { if (typeof n.value === 'string' && n.attributes?.graphNodeName) (r.nodes ??= []).push(n.value); if (typeof n.value === 'object' && n.value !== null && n.attributes?.edgeKind) { const e = n.value as { from: string; kind: string; to: string }; (r.edges ??= []).push([e.from, e.kind, e.to]); } }
+  liftFromIr: ((nodes: GeneIrFragment[]) => {
+    const r: { nodes?: string[]; edges?: Array<[string, string, string]> } = {};
+    for (const n of nodes) {
+      if (typeof n.value === 'string' && n.attributes?.graphNodeName) (r.nodes ??= []).push(n.value);
+      if (typeof n.value === 'object' && n.value !== null && n.attributes?.edgeKind) {
+        const e = n.value as { from: string; kind: string; to: string };
+        (r.edges ??= []).push([e.from, e.kind, e.to]);
+      }
+    }
     return r;
-  },
+  }) as GeneTypeDescriptor['liftFromIr'],
+  normalize: undefined,
 };
 
 // ── Library types (4) ──
 const libDesc = (typeId: string): GeneTypeDescriptor => ({ ...mkDesc(typeId, 'DOMAIN_SPECIFIC_LIBRARY_TYPE', typeId + ' domain type', null), mutationAllowed: false, crossoverAllowed: false });
-export const FIELD_DESCRIPTOR = libDesc('field');
-export const QUANTUM_DESCRIPTOR = libDesc('quantum');
-export const GEMATRIA_DESCRIPTOR = libDesc('gematria');
-export const RESONANCE_DESCRIPTOR = libDesc('resonance');
+export const FIELD_DESCRIPTOR: GeneTypeDescriptor = libDesc('field');
+export const QUANTUM_DESCRIPTOR: GeneTypeDescriptor = libDesc('quantum');
+export const GEMATRIA_DESCRIPTOR: GeneTypeDescriptor = libDesc('gematria');
+export const RESONANCE_DESCRIPTOR: GeneTypeDescriptor = libDesc('resonance');
 
-export const SOVEREIGNTY_DESCRIPTOR: GeneTypeDescriptor = { ...libDesc('sovereignty'), classification: 'SECURITY_PRIMITIVE', description: 'Cryptographic identity block', resourceEstimate: est(256) };
+export const SOVEREIGNTY_DESCRIPTOR: GeneTypeDescriptor = { ...libDesc('sovereignty'), classification: 'SECURITY_PRIMITIVE', description: 'Cryptographic identity block', resourceEstimate: est(256), normalize: undefined };
 
 // ── Exports ──
-export const CORE_GENE_DESCRIPTORS: GeneTypeDescriptor[] = [SCALAR_DESCRIPTOR, CATEGORICAL_DESCRIPTOR, SYMBOLIC_DESCRIPTOR, VECTOR_DESCRIPTOR, TEMPORAL_DESCRIPTOR, DIMENSIONAL_DESCRIPTOR, EXPRESSION_DESCRIPTOR, REGULATORY_DESCRIPTOR, STRUCT_DESCRIPTOR, ARRAY_DESCRIPTOR, GRAPH_DESCRIPTOR, TOPOLOGY_DESCRIPTOR];
-export const ALL_GENE_DESCRIPTORS: GeneTypeDescriptor[] = [...CORE_GENE_DESCRIPTORS, FIELD_DESCRIPTOR, QUANTUM_DESCRIPTOR, GEMATRIA_DESCRIPTOR, RESONANCE_DESCRIPTOR, SOVEREIGNTY_DESCRIPTOR];
+export const CORE_GENE_DESCRIPTORS: readonly GeneTypeDescriptor[] = [
+  SCALAR_DESCRIPTOR, CATEGORICAL_DESCRIPTOR, SYMBOLIC_DESCRIPTOR, VECTOR_DESCRIPTOR, TEMPORAL_DESCRIPTOR, DIMENSIONAL_DESCRIPTOR,
+  EXPRESSION_DESCRIPTOR, REGULATORY_DESCRIPTOR, STRUCT_DESCRIPTOR, ARRAY_DESCRIPTOR, GRAPH_DESCRIPTOR, TOPOLOGY_DESCRIPTOR,
+];
+export const ALL_GENE_DESCRIPTORS: readonly GeneTypeDescriptor[] = [
+  ...CORE_GENE_DESCRIPTORS, FIELD_DESCRIPTOR, QUANTUM_DESCRIPTOR, GEMATRIA_DESCRIPTOR, RESONANCE_DESCRIPTOR, SOVEREIGNTY_DESCRIPTOR,
+];
 
 export function createStandardGeneRegistry(): GeneTypeRegistry {
   const m = new Map<string, GeneTypeDescriptor>();
-  for (const d of ALL_GENE_DESCRIPTORS) { m.set(d.typeId, Object.freeze(d) as GeneTypeDescriptor); }
-  return Object.freeze({ version: '1.0', types: m, get: (id: string) => m.get(id), has: (id: string) => m.has(id), list: () => [...m.values()], listByClassification: (c: string) => [...m.values()].filter(t => t.classification === c) }) as GeneTypeRegistry;
+  for (const d of ALL_GENE_DESCRIPTORS) {
+    m.set(d.typeId, deepFreezeDescriptor(d));
+  }
+  // §9 — registry exposes a frozen internal `types` map (typed ReadonlyMap) so
+  // the interface contract is honored, while the live writer API (`get`/`has`/
+  // `list`) prevents consumers from doing structural mutation through the
+  // typed-as-readonly facade. We provide closure-backed operations as the only
+  // canonical mutation channel — there is no public `.register()`.
+  const typesReadOnly: ReadonlyMap<string, GeneTypeDescriptor> = Object.freeze({
+    has: (k) => m.has(k),
+    get: (k) => m.get(k),
+    entries: () => m.entries(),
+    keys: () => m.keys(),
+    values: () => m.values(),
+    forEach: (cb, thisArg) => m.forEach(cb, thisArg),
+    get size() { return m.size; },
+    [Symbol.iterator]: () => m[Symbol.iterator](),
+  }) as ReadonlyMap<string, GeneTypeDescriptor>;
+  return {
+    version: '1.0',
+    types: typesReadOnly,
+    get: (id) => m.get(id),
+    has: (id) => m.has(id),
+    list: () => [...m.values()],
+    listByClassification: (c) => [...m.values()].filter((t) => t.classification === c),
+  };
+}
+
+function deepFreezeDescriptor<T extends GeneTypeDescriptor>(d: T): T {
+  const frozen: T = Object.freeze({ ...d });
+  if (frozen.optionalCapabilities) Object.freeze(frozen.optionalCapabilities as readonly string[]);
+  if (frozen.migrations) Object.freeze(frozen.migrations as readonly unknown[]);
+  if (frozen.targetCapabilities) Object.freeze(frozen.targetCapabilities as readonly string[]);
+  return frozen;
 }

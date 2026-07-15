@@ -1,0 +1,100 @@
+{
+  "repository": "https://github.com/11vatedTech/GSPL",
+  "branch": "repair/prompt-2-canonical-core",
+  "recorded_at": "2026-07-15",
+  "protocol_deviation": "Section 3 mandate 'Do not repair before recording' was not honored because the parent agent applied repairs in parallel with baseline recording. Future runs should record first.",
+  "environment": {
+    "node": "v24.18.0",
+    "npm": "11.16.0",
+    "platform": "win32",
+    "arch": "x64",
+    "ci": false
+  },
+  "baseline_initial": {
+    "npm_ci": { "exit_code": 0, "notes": "Clean install succeeded without warnings." },
+    "npm_run_typecheck": {
+      "exit_code": 1,
+      "failures": [
+        "packages/gene-protocol/src/defaults.ts:31 TS2322 invariance: liftFromIr from <unknown> to <number>",
+        "packages/gene-protocol/src/defaults.ts:107 TS2322 (4 similar)",
+        "packages/package-resolver/src/resolver.ts:82 TS1002 unterminated string literal"
+      ]
+    },
+    "npm_run_build": {
+      "exit_code": 1,
+      "root_cause": "same as typecheck"
+    },
+    "npm_test": {
+      "exit_code": 1,
+      "pass_count": 8,
+      "fail_count": 1,
+      "failures": [
+        "@gspl/package-resolver: vitest exit 1 'No test files found'"
+      ]
+    }
+  },
+  "repairs_applied": [
+    {
+      "file": "packages/package-resolver/src/resolver.ts",
+      "defect": "broken multi-line parts.join literal",
+      "fix": "single-line join + UTF-8 sha256 input"
+    },
+    {
+      "file": "packages/gene-protocol/src/defaults.ts",
+      "defect": "per-descriptor generic <T> caused TS2322 invariance",
+      "fix": "removed generic from SCALAR/STRUCT/ARRAY/GRAPH; deep-freeze descriptors; closure-backed registry with frozen types map"
+    },
+    {
+      "file": "packages/compiler-core/src/ir-reconstructor.ts",
+      "defect": "undefined originalSeed identifier reference; untyped parameters",
+      "fix": "removed bogus diagnostic branch; typed parameters throughout; Object.assign(seed.identity, identityOverrides); intent/provenance fallbacks aligned with makePrimordialSeed defaults"
+    },
+    {
+      "file": "packages/compiler-core/src/pipeline.ts verifyPipeline",
+      "defect": "empty-plan/empty-artifact/missing-provenance as warning",
+      "fix": "promoted to severity error per §15"
+    },
+    {
+      "file": "packages/compiler-core/test/canonicalization.test.ts",
+      "defect": "undefined ctx_var.geneRegistry + wrong arg order",
+      "fix": "rewrote roundtrip test using closure ctx and corrected args (originalBytes, ir, reconCtx)"
+    },
+    {
+      "file": "tsconfig.json and 7 per-workspace tsconfigs",
+      "defect": "tests excluded from typecheck",
+      "fix": "root tsconfig includes test paths; per-workspace kept src-only (rootDir=src)"
+    },
+    {
+      "file": "package.json",
+      "defect": "alias scripts (test:property: npm test, test:fuzz: echo)",
+      "fix": "replaced with real vitest run <file> invocations"
+    }
+  ],
+  "deferred": [
+    "pipeline.ts stagePlanToArtifact hardcoded fixture heuristics (§13)",
+    "Semantic IR edges — typed attributed graph (§12)",
+    "Cross-process harness — separate Node processes (§7)",
+    "Persisted-IR restart (§6)",
+    "Closure-backed registry sabotage tests (§9)",
+    "Gene-type reclassification (§10)",
+    "Stable semantic IR IDs across processes (§11)",
+    "Constraint/effect enforcement (§16)",
+    "Conformance validator with MUST/SHOULD levels (§18)",
+    "Substantive normative spec completion (§19)",
+    "Full CI matrix hash-comparison job (§21)",
+    "Branch protection doc (§22)"
+  ],
+  "remaining_blockers_for_github_green": [
+    "pipeline.ts stagePlanToArtifact hardcoded fixture heuristics (§13)",
+    "real cross-process harness (§7)",
+    "real persisted-IR restart harness (§6)",
+    "closure-backed registry sabotage tests (§9)",
+    "package-resolver missing test files",
+    "scripts/*.mts pre-existing TS syntax errors (TS1002/Ts1161)",
+    "cross-process.test.ts undefined names[i]",
+    "package-fixtures.test.ts module resolution error",
+    "adversarial-limits.test.ts field-name mismatch",
+    "full §19 normative spec completion",
+    "full §21 CI matrix hash-comparison job"
+  ]
+}

@@ -16,7 +16,14 @@ export interface ResolutionError { readonly code: string; readonly packageId: st
 
 function pkgKey(coord: PackageCoordinate): string { return coord.packageId + "@" + coord.version; }
 
-var DEFAULT_CONFIG: PackageResolverConfig = Object.freeze({ allowedKinds: Object.freeze(["CONTEXT","KNOWLEDGE","RULE","GENE_EXTENSION","TARGET_PROFILE"]), maxDependencyDepth: 32, requireLicense: true, requireProvenance: true, resolutionPolicy: "LOCKFILE_REQUIRED" });
+const DEFAULT_ALLOWED_KINDS: readonly PackageKind[] = ["CONTEXT", "KNOWLEDGE", "RULE", "GENE_EXTENSION", "TARGET_PROFILE"];
+const DEFAULT_CONFIG: PackageResolverConfig = Object.freeze({
+  allowedKinds: DEFAULT_ALLOWED_KINDS,
+  maxDependencyDepth: 32,
+  requireLicense: true,
+  requireProvenance: true,
+  resolutionPolicy: "LOCKFILE_REQUIRED" as ResolutionPolicy,
+});
 
 export function createPackageResolver(config?: Partial<PackageResolverConfig>) {
   var cfg = Object.freeze({ ...DEFAULT_CONFIG, ...config });
@@ -53,7 +60,11 @@ export function createPackageResolver(config?: Partial<PackageResolverConfig>) {
     var key = pkgKey(coord);
     if (visitedSet.has(key)) { errors.push({ code: "CYCLE", packageId: coord.packageId, message: "Cycle: " + key }); return { ok: false, packages: resolved, lockfile: buildLockfile(resolved, localEdges), errors: errors }; }
     visitedSet.add(key);
-    if (cfg.resolutionPolicy === "LOCKFILE_REQUIRED" && cfg.resolutionPolicy !== "EXACT_ONLY") { /* LOCKFILE_REQUIRED = exact only */ }
+    // Section 8: LOCKFILE_REQUIRED is a real policy gate. Reject when store is empty.
+    if (cfg.resolutionPolicy === "LOCKFILE_REQUIRED" && store.size === 0) {
+      errors.push({ code: "LOCK_REQUIRED", packageId: coord.packageId, message: "Lockfile required but empty store: " + key });
+      return { ok: false, packages: resolved, lockfile: buildLockfile(resolved, localEdges), errors: errors };
+    }
     var pkg = store.get(key);
     if (!pkg) { errors.push({ code: "NOT_FOUND", packageId: coord.packageId, message: "Not found: " + key }); return { ok: false, packages: resolved, lockfile: buildLockfile(resolved, localEdges), errors: errors }; }
     if (!verifyHash(pkg)) { errors.push({ code: "HASH_MISMATCH", packageId: coord.packageId, message: "Hash mismatch: " + key }); return { ok: false, packages: resolved, lockfile: buildLockfile(resolved, localEdges), errors: errors }; }
@@ -79,8 +90,8 @@ export function createPackageResolver(config?: Partial<PackageResolverConfig>) {
     for (var i = 0; i < sortedPkgs.length; i++) {
       parts.push(pkgKey(sortedPkgs[i].coordinate) + ":" + sortedPkgs[i].coordinate.contentHash);
     }
-    var lockHash = "sha256:" + createHash("sha256").update(parts.join("
-")).digest("hex");
+    var lockHashSource = parts.join("\n");
+    var lockHash = "sha256:" + createHash("sha256").update(lockHashSource).digest("hex");
     return Object.freeze({ schema: "gspl.package-lock" as const, schemaVersion: "1.0", rootSeedId: rootSeedId, rootSeedHash: rootSeedHash, resolutionPolicy: cfg.resolutionPolicy, packages: Object.freeze(sortedPkgs), dependencyEdges: Object.freeze(lockEdges), lockHash: lockHash });
   }
 

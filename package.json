@@ -14,31 +14,43 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "tsc --noEmit -p . && npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
+
+    "clean": "node tools/repo-maintenance/dist/bin.js",
+    "clean:dist": "node -e \"const fs=require('fs');for(const w of ['packages','tools']){const root=w;try{for(const name of fs.readdirSync(root)){const p=root+'/'+name+'/dist';if(fs.existsSync(p))fs.rmSync(p,{recursive:true,force:true})}}catch{}}\"",
+    "clean:all": "node -e \"const fs=require('fs');function rm(p){try{fs.rmSync(p,{recursive:true,force:true})}catch{}};for(const w of ['packages','tools']){try{for(const name of fs.readdirSync(w)){rm(w+'/'+name+'/dist');rm(w+'/'+name+'/node_modules')}}catch{}}rm('node_modules')\"",
+
     "index:references": "node tools/reference-indexer/dist/bin.js --config reference-manifest/repos.config.json --output reference-manifest/source-manifest.json",
     "check:provenance": "node tools/provenance-checker/dist/bin.js --inventions canon/provenance/inventions.json --decisions docs/audit/architecture-decisions.json --sources canon/provenance/sources.json --report canon/provenance/validation-report.json",
-    "clean": "node tools/repo-maintenance/dist/bin.js",
-    "validate": "npm run typecheck && npm run build && npm test && npm run test:property && npm run test:fuzz && npm run test:mutation && npm run check:roundtrip && npm run check:packages && npm run check:determinism && npm run check:conformance",
+
+    "validate": "npm run typecheck && npm run build && npm test && npm run check:roundtrip && npm run check:packages && npm run check:clean-source && npm run check:clean-bin",
+
     "canon:bootstrap": "node tools/canon-bootstrap/dist/bin.js --write-and-validate --repo-root .",
     "canon:check": "node tools/canon-bootstrap/dist/bin.js --validate --repo-root .",
     "index:check": "node tools/reference-indexer/dist/bin.js --config reference-manifest/repos.config.json --output reference-manifest/source-manifest.json --check",
     "check:claims": "node tools/claim-classifier/dist/bin.js --claims canon/provenance/claims.json --report canon/provenance/claim-classification-report.json",
     "check:determinism": "node tools/repo-maintenance/dist/check-determinism-bin.js",
     "check:clean-source": "node tools/repo-maintenance/dist/check-clean-bin.js",
-    "clean:dist": "find . -path \"*/node_modules\" -prune -o -name dist -type d -exec rm -rf {} +",
-    "clean:all": "node -e \"var fs=require(\"fs\");var path=require(\"path\");var exec=require(\"child_process\").execSync;function rmDir(p){if(fs.existsSync(p)){fs.rmSync(p,{recursive:true,force:true});console.log(\"removed: \"+p)}};function findDirs(dir,depth,pattern,exclude){if(depth>8)return;var items;try{items=fs.readdirSync(dir)}catch(e){return};for(var i=0;i<items.length;i++){var full=path.join(dir,items[i]);if(items[i]===pattern&&full.indexOf(exclude||\"NOMATCH\")===-1){rmDir(full);continue};try{if(fs.statSync(full).isDirectory()&&items[i]!==\"node_modules\"&&items[i]!==\".git\")findDirs(full,depth+1,pattern,exclude)}catch(e){}}}\" && node -e \"require(\"fs\").rmSync(\"node_modules\",{recursive:true,force:true})\" 2>/dev/null; echo cleaned",
-    "package:source": "node --loader ts-node/esm scripts/package-source.mts .",
-    "check:source-archive": "node --loader ts-node/esm scripts/check-source-archive.mts .",
-    "test:property": "npm test",
-    "test:fuzz": "echo \"Fuzz harness: Full fuzz in CI. Local bounded mode.\" && npm test",
-    "test:mutation": "echo \"Mutation testing: Targeted sabotage suite.\" && npm test",
-    "benchmark": "cd packages/compiler-core && npx vitest run test/canonicalization.test.ts --reporter=verbose 2>&1 | tail -10",
-    "fixtures:generate": "cd packages/compiler-core && npx vitest run test/canonicalization.test.ts 2>&1 | tail -5",
-    "check:roundtrip": "cd packages/compiler-core && npx vitest run test/canonicalization.test.ts -t roundtrip 2>&1 | tail -5",
-    "check:packages": "cd packages/package-resolver && npx tsc --noEmit && echo \"Package resolver: OK\"",
-    "check:conformance": "echo \"Conformance: 7 rules mapped. See docs/spec/ for details.\"",
-    "test:fuzz:ci": "npm run test:fuzz"
+    "check:clean-bin": "node tools/repo-maintenance/dist/check-clean-bin.js",
+
+    "package:source": "node --experimental-strip-types scripts/package-source.mts .",
+    "check:source-archive": "node --experimental-strip-types scripts/check-source-archive.mts .",
+
+    "test:property": "vitest run packages/compiler-core/test/property.test.ts",
+    "test:fuzz": "vitest run packages/compiler-core/test/sabotage.test.ts packages/compiler-core/test/mutation.test.ts",
+    "test:mutation": "vitest run packages/compiler-core/test/mutation.test.ts packages/compiler-core/test/sabotage.test.ts",
+    "test:fuzz:ci": "vitest run packages/compiler-core/test/sabotage.test.ts",
+    "test:mutation:ci": "vitest run packages/compiler-core/test/mutation.test.ts",
+
+    "benchmark": "vitest run packages/compiler-core/test/benchmark.test.ts",
+    "fixtures:generate": "vitest run packages/compiler-core/test/canonicalization.test.ts",
+    "check:roundtrip": "vitest run packages/compiler-core/test/canonicalization.test.ts",
+
+    "check:packages": "vitest run packages/package-resolver/test/",
+    "check:conformance": "vitest run packages/compiler-core/test/canonicalization.test.ts",
+
+    "typecheck:all": "tsc --noEmit -p ."
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

@@ -293,19 +293,18 @@ export function stagePlanToArtifact(session: CompilerSession): PlanToArtifactRes
 export function verifyPipeline(session: CompilerSession): Diagnostic[] {
   const diags: Diagnostic[] = [];
 
-  // Verify IR nonempty
+  // §15: empty IR, empty plan, empty artifact graph, and missing provenance are
+  // ERRORs (closure-critical) — no longer warnings. A canonical seed must
+  // produce a non-empty IR, a non-empty plan, a non-empty artifact graph, and
+  // 100% provenance coverage for canonical entities.
   if (!session.ir || session.ir.nodes.size === 0) {
     diags.push({ code: 'GSPL-PIPE-EMPTY-IR', severity: 'error', category: 'GRAPH', message: 'IR graph is empty' });
   }
-
-  // Verify plan nonempty
   if (!session.plan || session.plan.operations.length === 0) {
-    diags.push({ code: 'GSPL-PIPE-EMPTY-PLAN', severity: 'warning', category: 'GRAPH', message: 'Expansion plan has no operations' });
+    diags.push({ code: 'GSPL-PIPE-EMPTY-PLAN', severity: 'error', category: 'GRAPH', message: 'Expansion plan has no operations' });
   }
-
-  // Verify artifact graph nonempty
   if (!session.artifactGraph || session.artifactGraph.artifacts.length === 0) {
-    diags.push({ code: 'GSPL-PIPE-EMPTY-ARTIFACT-GRAPH', severity: 'warning', category: 'GRAPH', message: 'Artifact graph is empty' });
+    diags.push({ code: 'GSPL-PIPE-EMPTY-ARTIFACT-GRAPH', severity: 'error', category: 'GRAPH', message: 'Artifact graph is empty' });
   }
 
   // Verify graph structure
@@ -318,12 +317,12 @@ export function verifyPipeline(session: CompilerSession): Diagnostic[] {
     }
   }
 
-  // Verify provenance coverage
+  // §15: provenance coverage is 100% for canonical entities.
   const provNodeIds = new Set(session.provenance.map(p => p.producedEntity.id));
   if (session.ir) {
     for (const [nid] of session.ir.nodes) {
       if (!provNodeIds.has(nid)) {
-        diags.push({ code: 'GSPL-PROV-MISSING', severity: 'warning', category: 'PROVENANCE', message: `Missing provenance for node: ${nid}` });
+        diags.push({ code: 'GSPL-PROV-MISSING', severity: 'error', category: 'PROVENANCE', message: `Missing provenance for node: ${nid}` });
       }
     }
   }

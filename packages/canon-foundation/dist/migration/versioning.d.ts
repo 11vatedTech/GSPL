@@ -55,6 +55,8 @@ export interface VersionRegistry {
 export declare function createVersionRegistry(): VersionRegistry;
 export declare function registerSchemaVersion(registry: VersionRegistry, schema: SchemaVersion): void;
 export declare function registerMigration(registry: VersionRegistry, migration: Migration): void;
+/** Multi-step migration path discovery — Prompt 2 §15 */
+export declare function findMigrationPath(registry: VersionRegistry, fromSchema: string, fromVersion: string, toSchema: string, toVersion: string, maxSteps?: number): CompatibilityCheck;
 export declare function checkCompatibility(registry: VersionRegistry, fromSchema: string, fromVersion: string, toSchema: string, toVersion: string): CompatibilityCheck;
 export declare function applyMigration(migration: Migration, data: unknown): MigrationResult;
 export declare function migrateToVersion(registry: VersionRegistry, data: unknown, fromSchema: string, fromVersion: string, toSchema: string, toVersion: string): MigrationResult;

@@ -83,7 +83,17 @@ describe("Seed to IR to Seed Round Trip", function() {
       var result = runPipeline(ctx, f.seed);
       var normalized = result.session.normalizedSeed || f.seed;
       var ir = result.session.ir;
-      var originalBytes = canonicalizeSeed(normalized); var ctx = { schemaRegistry: {}, geneRegistry: ctx_var.geneRegistry, compilerVersion: "0.1.0", canonVersion: "1.0", limits: { maxGenes: 1000, maxConstraints: 1000, maxDependencies: 1000 } }; var rt = verifyIndependentReconstruction(normalized, originalBytes, ir, ctx);
+      var originalBytes = canonicalizeSeed(normalized);
+      // §5: reconstruction-context geneRegistry comes from the SAME compiler context that
+      // produced the IR (closure variable `ctx`), not from an undefined identifier.
+      var reconCtx = {
+        schemaRegistry: {},
+        geneRegistry: ctx.geneRegistry,
+        compilerVersion: ctx.compilerVersion,
+        canonVersion: ctx.canonVersion,
+        limits: { maxGenes: 1000, maxConstraints: 1000, maxDependencies: 1000 },
+      };
+      var rt = verifyIndependentReconstruction(originalBytes, ir!, reconCtx);
       expect(rt.ok).toBe(true);
       expect(rt.bytesMatch).toBe(true);
     });

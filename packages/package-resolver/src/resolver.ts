@@ -83,10 +83,20 @@ export function createPackageResolver(config?: Partial<PackageResolverConfig>) {
   }
 
   function buildLockfile(packages: readonly ResolvedPackage[], localEdges: LockedDependencyEdge[]): PackageLock {
-    var lockEdges = [...localEdges];
     var lockPkgs = packages.map(function(p: ResolvedPackage): LockedPackage { return { coordinate: p.coordinate, dependencies: p.dependencies, capabilities: p.capabilities, effects: p.effects, license: p.license, provenance: p.provenance }; });
     var parts: string[] = [rootSeedId, rootSeedHash];
     var sortedPkgs = [...lockPkgs].sort(function(a: LockedPackage, b: LockedPackage) { return pkgKey(a.coordinate).localeCompare(pkgKey(b.coordinate)); });
+    // §8 derive edges from sortedPkgs so transitive dependency edges across
+    // recursion frames are captured. localEdges is per-frame and was previously
+    // discarding sub.lockfile.dependencyEdges; deriving deterministic edges from
+    // the resolved package list preserves correctness for snapshot callsites
+    // (computeLockHash, getLockfileSnapshot) that pass empty `[]`.
+    var lockEdges: LockedDependencyEdge[] = [];
+    for (var k = 0; k < sortedPkgs.length; k++) {
+      for (var m = 0; m < sortedPkgs[k].dependencies.length; m++) {
+        lockEdges.push({ from: sortedPkgs[k].coordinate, to: sortedPkgs[k].dependencies[m] });
+      }
+    }
     for (var i = 0; i < sortedPkgs.length; i++) {
       parts.push(pkgKey(sortedPkgs[i].coordinate) + ":" + sortedPkgs[i].coordinate.contentHash);
     }

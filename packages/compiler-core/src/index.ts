@@ -65,7 +65,10 @@ export {
 
 // IR Reconstruction
 export { reconstructSeedFromIr, verifyIndependentReconstruction } from './ir-reconstructor.js';
-export type { IrReconstructionResult, ReconstructionContext } from './ir-reconstructor.js';
+export { RECONSTRUCTION_MODE, GENE_TYPE_RECONSTRUCTION_SUPPORT } from './ir-reconstructor.js';
+export type { IrReconstructionResult, ReconstructionContext, ReconstructionMode,
+  ReconstructDiagnostic, ReconstructDiagnosticCode, ReconstructDiagnosticSeverity,
+  ReconstructDiagnosticCategory } from './ir-reconstructor.js';
 
 // Semantic Verification
 export {

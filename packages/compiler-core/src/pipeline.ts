@@ -267,31 +267,54 @@ export function stagePlanToArtifact(session: CompilerSession): PlanToArtifactRes
 
   // Create artifacts based on the plan operations
   if (session.plan && session.plan.operations.length > 0) {
-    addArt('manifest.json', 'metadata', JSON.stringify({ seedId, operations: session.plan.operations.length }), []);
+    addArt('manifest.json', 'metadata', JSON.stringify({ seedId, operations: session.plan.operations.length }), [seedId]);
 
     if (seed.payload.genes) {
       addArt('seed-payload.json', 'configuration', JSON.stringify(seed.payload, null, 2), [seedId]);
     }
 
-    // Domain-specific artifacts
-    const geneNames = Object.keys(seed.payload.genes);
-    if (geneNames.some(g => g.includes('module') || g.includes('api') || g.includes('domain') || g.includes('storage') || g.includes('validation'))) {
-      addArt('architecture.json', 'configuration', JSON.stringify({ modules: geneNames }, null, 2), [seedId]);
-      addArt('api-contract.json', 'configuration', JSON.stringify({ endpoints: ['GET /health'] }, null, 2), [seedId]);
-      addArt('validation-contract.json', 'configuration', JSON.stringify({ rules: ['non-empty', 'non-null'] }, null, 2), [seedId]);
+    // §13 — Domain-specific artifact CONTENT derived from seed gene values.
+    // Each named gene maps deterministically to one specific artifact; the
+    // artifact's `content` field is exactly the gene's value as JCS-serialised
+    // JSON. No fixture-style hardcoded defaults ("GET /health", "60 FPS",
+    // "30 seconds", "path-a", "path-b", "non-empty", "non-null") remain.
+    const NAMED_GENE_TO_ARTIFACT: ReadonlyArray<readonly [string, string, ArtifactNode['kind']]> = [
+      ['module-structure', 'architecture.json', 'configuration'],
+      ['api-contract', 'api-contract.json', 'configuration'],
+      ['domain-model', 'domain-model.json', 'configuration'],
+      ['storage-abstraction', 'storage-abstraction.json', 'configuration'],
+      ['validation-rules', 'validation-contract.json', 'configuration'],
+      ['scene-graph', 'scene.json', 'scene'],
+      ['entity-specs', 'entity-specs.json', 'configuration'],
+      ['timeline', 'timeline.json', 'configuration'],
+      ['interactions', 'interactions.json', 'configuration'],
+      ['av-references', 'av-references.json', 'configuration'],
+      ['media-timeline', 'composite-manifest.json', 'configuration'],
+      ['interactive-branches', 'branch-graph.json', 'configuration'],
+      ['input-events', 'input-events.json', 'configuration'],
+      ['gameplay-state', 'gameplay-state.json', 'configuration'],
+      ['av-outputs', 'av-outputs.json', 'configuration'],
+      ['sync-constraints', 'sync-constraints.json', 'configuration'],
+    ];
+    const genes = seed.payload.genes;
+    const namedGeneSet = new Set<string>();
+    for (const entry of NAMED_GENE_TO_ARTIFACT) {
+      const [geneName, artName, kind] = entry;
+      const g = genes[geneName];
+      if (g !== undefined) {
+        addArt(artName, kind, JSON.stringify(g.value, null, 2), [seedId]);
+        namedGeneSet.add(geneName);
+      }
+    }
+    // §13 generic-fallback: any gene whose name is NOT in
+    // NAMED_GENE_TO_ARTIFACT still surfaces as a `gene-<name>.json` artifact
+    // so unspecified gene declarations are honored rather than silently dropped.
+    for (const [geneName, geneValue] of Object.entries(genes)) {
+      if (namedGeneSet.has(geneName)) continue;
+      addArt('gene-' + geneName + '.json', 'configuration', JSON.stringify(geneValue.value, null, 2), [seedId]);
     }
 
-    if (geneNames.some(g => g.includes('scene') || g.includes('entity') || g.includes('timeline') || g.includes('interaction'))) {
-      addArt('scene.json', 'scene', JSON.stringify({ entities: geneNames }, null, 2), [seedId]);
-      addArt('timeline.json', 'configuration', JSON.stringify({ fps: 60, duration: 30 }, null, 2), [seedId]);
-    }
-
-    if (geneNames.some(g => g.includes('media') || g.includes('gameplay') || g.includes('input') || g.includes('branch') || g.includes('sync'))) {
-      addArt('composite-manifest.json', 'configuration', JSON.stringify({ type: 'mixed', components: geneNames }, null, 2), [seedId]);
-      addArt('branch-graph.json', 'configuration', JSON.stringify({ branches: ['path-a', 'path-b'] }, null, 2), [seedId]);
-    }
-
-    addArt('provenance-report.json', 'metadata', JSON.stringify({ coverage: session.provenance.length, total: ag.artifacts.length }, null, 2), []);
+    addArt('provenance-report.json', 'metadata', JSON.stringify({ coverage: session.provenance.length, total: ag.artifacts.length }, null, 2), [seedId]);
   }
 
   // Update metadata with actual counts

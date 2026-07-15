@@ -23,6 +23,8 @@
     "allowSyntheticDefaultImports": true,
     "declaration": true,
     "declarationMap": true,
-    "sourceMap": true
-  },  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "tools/*/src/**/*.ts", "tools/*/test/**/*.ts", "tests/**/*.ts"],
+    "sourceMap": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },  "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "tools/*/src/**/*.ts", "tools/*/test/**/*.ts", "scripts/**/*.ts", "scripts/**/*.mts", "tests/**/*.ts"],
   "exclude": ["node_modules", "**/dist", "**/coverage", "**/.vite"]}

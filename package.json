@@ -34,8 +34,8 @@
     "check:clean-source": "node tools/repo-maintenance/dist/check-clean-bin.js",
     "check:clean-bin": "node tools/repo-maintenance/dist/check-clean-bin.js",
 
-    "package:source": "node --experimental-strip-types scripts/package-source.mts .",
-    "check:source-archive": "node --experimental-strip-types scripts/check-source-archive.mts .",
+    "package:source": "node --experimental-strip-types scripts/source-package/cli.mts .",
+    "check:source-archive": "node --experimental-strip-types scripts/source-package/verify.mts build/gspl-canon-source.tar.gz build/gspl-canon-source-manifest.json",
 
     "test:property": "vitest run packages/compiler-core/test/property.test.ts",
     "test:fuzz": "vitest run packages/compiler-core/test/sabotage.test.ts packages/compiler-core/test/mutation.test.ts",

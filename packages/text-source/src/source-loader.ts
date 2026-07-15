@@ -1,26 +1,53 @@
 /**
  * SourceLoader — explicit source loading interface.
- * Prompt 3 §15 (module and source model): no parser may read files directly;
- * all source loading goes through this interface.
+ * Byte-level reading (Prompt 3 §4), strict UTF-8, structured SourceLoadResult.
  */
-import { readFileSync, existsSync } from 'node:fs';
-import { resolve, isAbsolute, sep } from 'node:path';
+import { readFileSync, statSync, realpathSync, existsSync } from 'node:fs';
+import { resolve as resolvePath, isAbsolute, sep } from 'node:path';
 import { SourceDocument } from './source-document.js';
+import { decodeStrictUtf8 } from './utf8.js';
+import { normalizeLogicalSourcePath } from './logical-path.js';
+import { makeDiagnostic } from './diagnostic-types.js';
+import type {
+  ISourceLoader,
+  SourceRequest,
+  SourceLoadResult,
+  SourceDocumentData,
+  LogicalPathPolicy,
+  CasePolicy,
+  SymlinkPolicy,
+} from './types.js';
+import { DEFAULT_ENCODING_POLICY, DEFAULT_SOURCE_LIMITS, DEFAULT_LOGICAL_PATH_POLICY } from './types.js';
+import type { SourceId } from './types.js';
+import type { Diagnostic } from './diagnostic-types.js';
 
-export interface ISourceLoader {
-  /** Load a source by its logical path. */
-  load(logicalPath: string): Promise<SourceDocument>;
-  /** Synchronous variant. Throws if the loader is async-only. */
-  loadSync(logicalPath: string): SourceDocument;
+export type { SourceRequest, SourceLoadResult, SourceDocumentData } from './types.js';
+
+const DUMMY_ID = '' as SourceId;
+
+function byteDiagnostic(code: string, message: string, byteOffset: number): Diagnostic {
+  return makeDiagnostic({
+    code,
+    message,
+    severity: 'error',
+    span: { sourceId: DUMMY_ID, start: byteOffset, end: byteOffset },
+    category: 'source',
+    phase: 'load',
+    canonical: true,
+  });
 }
 
-/** In-memory source loader for tests and tooling. Deterministic. */
-export class InMemorySourceLoader implements ISourceLoader {
+function makeDecoder() {
+  return new TextEncoder();
+}
+
+/** In-memory source loader for tests and tooling. */
+export class InMemorySourceLoader {
   private readonly files = new Map<string, SourceDocument>();
 
-  /** Provide a source by logical path and text. Last write wins. */
-  provide(logicalPath: string, text: string): SourceDocument {
-    const doc = SourceDocument.create(logicalPath, text);
+  provide(logicalPath: string, text: string, hadBom = false): SourceDocument {
+    const rawBytes = new TextEncoder().encode(text);
+    const doc = SourceDocument.fromParts({ logicalPath, rawBytes, text, hadBom });
     this.files.set(logicalPath, doc);
     return doc;
   }
@@ -29,63 +56,253 @@ export class InMemorySourceLoader implements ISourceLoader {
     return this.files.has(logicalPath);
   }
 
-  async load(logicalPath: string): Promise<SourceDocument> {
-    return this.loadSync(logicalPath);
+  async load(req: SourceRequest): Promise<SourceLoadResult> {
+    return this.loadSync(req);
   }
 
-  loadSync(logicalPath: string): SourceDocument {
-    const doc = this.files.get(logicalPath);
-    if (!doc) throw new Error(`Source not found: ${logicalPath}`);
-    return doc;
+  loadSync(req: SourceRequest): SourceLoadResult {
+    const pathResult = normalizeLogicalSourcePath(req.logicalPath, DEFAULT_LOGICAL_PATH_POLICY);
+    if (!pathResult.ok) return { ok: false, diagnostics: pathResult.diagnostics };
+    const doc = this.files.get(pathResult.normalized!);
+    if (!doc) {
+      return {
+        ok: false,
+        diagnostics: [
+          makeDiagnostic({
+            code: 'GSPL-SOURCE-NOT-FOUND',
+            message: 'source not found in in-memory loader: ' + pathResult.normalized,
+            severity: 'error',
+            span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+            category: 'source',
+            phase: 'load',
+            canonical: true,
+          }),
+        ],
+      };
+    }
+    return { ok: true, document: doc.toData(), diagnostics: [] };
   }
 }
 
 /**
- * Filesystem source loader with path security.
- * Prompt 3 §7, §15: reject path traversal, absolute paths, UNC paths, symlink escapes.
+ * Filesystem source loader with full containment + symlink policy.
+ * Reads bytes first, then strict-decodes UTF-8, then constructs SourceDocument.
  */
-export class FilesystemSourceLoader implements ISourceLoader {
+export class FilesystemSourceLoader {
   constructor(private readonly rootDir: string) {
-    if (!isAbsolute(rootDir)) throw new Error('FilesystemSourceLoader root must be absolute');
+    if (!isAbsolute(rootDir)) {
+      throw new Error('FilesystemSourceLoader root must be absolute');
+    }
+    this.rootDir = resolvePath(rootDir);
   }
 
-  private resolveSafe(logicalPath: string): string {
-    // Reject absolute, UNC, drive-letter paths.
-    // Check UNC BEFORE absolute: //server/share starts with /, but is more
-    // specifically a UNC path and should be reported as such.
-    if (logicalPath.startsWith('//') || logicalPath.startsWith('\\\\')) {
-      throw new Error(`UNC import path forbidden: ${logicalPath}`);
+  private resolveSafe(
+    logicalPath: string,
+    policy: LogicalPathPolicy,
+    symlinkPolicy: SymlinkPolicy,
+  ): { ok: true; abs: string } | { ok: false; diagnostics: readonly Diagnostic[] } {
+    const pathResult = normalizeLogicalSourcePath(logicalPath, policy);
+    if (!pathResult.ok) return { ok: false, diagnostics: pathResult.diagnostics };
+    const abs = resolvePath(this.rootDir, pathResult.normalized!);
+    // Containment check.
+    if (abs !== this.rootDir && !abs.startsWith(this.rootDir + sep) && !abs.startsWith(this.rootDir + '/')) {
+      return {
+        ok: false,
+        diagnostics: [
+          makeDiagnostic({
+            code: 'GSPL-SOURCE-PATH-ESCAPE',
+            message: 'path escapes the allowed root',
+            severity: 'error',
+            span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+            category: 'source',
+            phase: 'load',
+            canonical: true,
+          }),
+        ],
+      };
     }
-    if (logicalPath.startsWith('/') || logicalPath.startsWith('\\')) {
-      throw new Error(`Absolute import path forbidden: ${logicalPath}`);
-    }
-    if (/^[A-Za-z]:[\\/]/.test(logicalPath)) {
-      throw new Error(`Drive-letter import path forbidden: ${logicalPath}`);
-    }
-    // Reject traversal segments.
-    const segments = logicalPath.split(/[\\/]/);
-    for (const seg of segments) {
-      if (seg === '..' || seg === '.') {
-        throw new Error(`Path traversal forbidden: ${logicalPath}`);
+    // Symlink check.
+    if (existsSync(abs)) {
+      try {
+        const real = realpathSync(abs);
+        if (!real.startsWith(this.rootDir + sep) && real !== this.rootDir) {
+          return {
+            ok: false,
+            diagnostics: [
+              makeDiagnostic({
+                code: 'GSPL-SOURCE-SYMLINK-ESCAPE',
+                message: 'symlink target is outside the allowed root',
+                severity: 'error',
+                span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+                category: 'source',
+                phase: 'load',
+                canonical: true,
+              }),
+            ],
+          };
+        }
+      } catch {
+        // realpathSync may fail on broken symlinks; treat as escape.
+        if (symlinkPolicy === 'forbid') {
+          return {
+            ok: false,
+            diagnostics: [
+              makeDiagnostic({
+                code: 'GSPL-SOURCE-SYMLINK-ESCAPE',
+                message: 'broken symlink is forbidden',
+                severity: 'error',
+                span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+                category: 'source',
+                phase: 'load',
+                canonical: true,
+              }),
+            ],
+          };
+        }
       }
     }
-    const abs = resolve(this.rootDir, logicalPath);
-    // Reject escape outside rootDir.
-    const root = resolve(this.rootDir);
-    if (abs !== root && !abs.startsWith(root + sep)) {
-      throw new Error(`Path escapes root: ${logicalPath}`);
+    return { ok: true, abs };
+  }
+
+  async load(req: SourceRequest): Promise<SourceLoadResult> {
+    return this.loadSync(req);
+  }
+
+  loadSync(req: SourceRequest): SourceLoadResult {
+    const safe = this.resolveSafe(req.logicalPath, DEFAULT_LOGICAL_PATH_POLICY, req.symlinkPolicy);
+    if (!safe.ok) return { ok: false, diagnostics: safe.diagnostics };
+    if (!existsSync(safe.abs)) {
+      return {
+        ok: false,
+        diagnostics: [
+          makeDiagnostic({
+            code: 'GSPL-SOURCE-NOT-FOUND',
+            message: 'source file not found: ' + req.logicalPath,
+            severity: 'error',
+            span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+            category: 'source',
+            phase: 'load',
+            canonical: true,
+          }),
+        ],
+      };
     }
-    return abs;
-  }
-
-  async load(logicalPath: string): Promise<SourceDocument> {
-    return this.loadSync(logicalPath);
-  }
-
-  loadSync(logicalPath: string): SourceDocument {
-    const abs = this.resolveSafe(logicalPath);
-    if (!existsSync(abs)) throw new Error(`Source file not found: ${abs}`);
-    const text = readFileSync(abs, 'utf8');
-    return SourceDocument.create(logicalPath, text);
+    let stat;
+    try {
+      stat = statSync(safe.abs);
+    } catch (e) {
+      return {
+        ok: false,
+        diagnostics: [
+          makeDiagnostic({
+            code: 'GSPL-SOURCE-IO-ERROR',
+            message: 'failed to stat: ' + String((e as Error).message ?? e),
+            severity: 'error',
+            span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+            category: 'source',
+            phase: 'load',
+            canonical: true,
+          }),
+        ],
+      };
+    }
+    if (!stat.isFile()) {
+      return {
+        ok: false,
+        diagnostics: [
+          makeDiagnostic({
+            code: 'GSPL-SOURCE-NOT-REGULAR-FILE',
+            message: 'source path is not a regular file',
+            severity: 'error',
+            span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+            category: 'source',
+            phase: 'load',
+            canonical: true,
+          }),
+        ],
+      };
+    }
+    if (stat.size > req.limits.maxSourceBytes) {
+      return {
+        ok: false,
+        diagnostics: [
+          makeDiagnostic({
+            code: 'GSPL-SOURCE-FILE-TOO-LARGE',
+            message: 'source file exceeds maxSourceBytes: ' + stat.size,
+            severity: 'error',
+            span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+            category: 'source',
+            phase: 'load',
+            canonical: true,
+          }),
+        ],
+      };
+    }
+    let bytes: Uint8Array;
+    try {
+      bytes = new Uint8Array(readFileSync(safe.abs));
+    } catch (e) {
+      return {
+        ok: false,
+        diagnostics: [
+          makeDiagnostic({
+            code: 'GSPL-SOURCE-IO-ERROR',
+            message: 'failed to read: ' + String((e as Error).message ?? e),
+            severity: 'error',
+            span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+            category: 'source',
+            phase: 'load',
+            canonical: true,
+          }),
+        ],
+      };
+    }
+    const decoded = decodeStrictUtf8(bytes);
+    if (!decoded.ok) {
+      return {
+        ok: false,
+        diagnostics: [
+          makeDiagnostic({
+            code: 'GSPL-SOURCE-INVALID-UTF8',
+            message: 'invalid UTF-8 at byte offset ' + decoded.byteOffset + ': ' + decoded.reason,
+            severity: 'error',
+            span: { sourceId: DUMMY_ID, start: decoded.byteOffset, end: decoded.byteOffset },
+            category: 'source',
+            phase: 'decode',
+            related: [
+              {
+                message: 'context: ' + decoded.context,
+                span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+              },
+            ],
+            canonical: true,
+          }),
+        ],
+      };
+    }
+    if (decoded.text.length > req.limits.maxDecodedCodeUnits) {
+      return {
+        ok: false,
+        diagnostics: [
+          makeDiagnostic({
+            code: 'GSPL-SOURCE-FILE-TOO-LARGE',
+            message: 'decoded source exceeds maxDecodedCodeUnits: ' + decoded.text.length,
+            severity: 'error',
+            span: { sourceId: DUMMY_ID, start: 0, end: 0 },
+            category: 'source',
+            phase: 'load',
+            canonical: true,
+          }),
+        ],
+      };
+    }
+    const doc = SourceDocument.fromParts({
+      logicalPath: req.logicalPath,
+      rawBytes: bytes,
+      text: decoded.text,
+      hadBom: decoded.hadBom,
+      encoding: req.encoding,
+    });
+    return { ok: true, document: doc.toData(), diagnostics: [] };
   }
 }

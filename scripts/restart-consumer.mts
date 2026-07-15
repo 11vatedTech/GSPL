@@ -92,5 +92,6 @@ const verification = {
   ok: seedHashMatch && bytesHashMatch && reconResult.ok,
 };
 
+process.stdout.write('CHILD_PID=' + process.pid + '\n');
 process.stdout.write(JSON.stringify(verification, null, 2) + '\n');
 if (!verification.ok) process.exit(1);

@@ -1,1 +1,0 @@
-{"dependencies":{"contextRefs":[],"knowledgeRefs":[],"ruleSetRefs":[],"targetContracts":[{"requiredCapabilities":["emit-typescript"],"targetId":"typescript-modules","targetType":"source"}]},"schema":"gspl.package-lock","schemaVersion":"1.0"}

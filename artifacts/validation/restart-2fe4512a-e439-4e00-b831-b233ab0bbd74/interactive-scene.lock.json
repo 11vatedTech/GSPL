@@ -1,1 +1,0 @@
-{"dependencies":{"contextRefs":[],"knowledgeRefs":[],"ruleSetRefs":[],"targetContracts":[{"requiredCapabilities":["emit-media","emit-scene"],"targetId":"scene-output","targetType":"scene"}]},"schema":"gspl.package-lock","schemaVersion":"1.0"}

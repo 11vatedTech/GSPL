@@ -1,1 +1,0 @@
-{"dependencies":{"contextRefs":[],"knowledgeRefs":[],"ruleSetRefs":[],"targetContracts":[{"requiredCapabilities":["semantic-validation"],"targetId":"extension-metadata-output","targetType":"composite"}]},"schema":"gspl.package-lock","schemaVersion":"1.0"}

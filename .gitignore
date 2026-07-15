@@ -64,3 +64,17 @@ desktop.ini
 
 # Project-internal: not for tracking
 Reference-repos_and_planning/
+
+# Dynamic restart/runtime subdirs are NOT tracked.
+artifacts/validation/restart-*/
+artifacts/validation/runtime-*/
+artifacts/validation/tmp-*/
+# The rest of artifacts/validation/ IS tracked (governed canonical manifests).
+!artifacts/validation/canonical-output-manifest.json
+!artifacts/validation/canonical-output-manifest.json.sha256
+!artifacts/validation/canonical-output-manifest-*.json
+!artifacts/validation/canonical-output-manifest-*.json.sha256
+!artifacts/validation/source-archive-manifest.json
+!artifacts/validation/source-archive-manifest.json.sha256
+!artifacts/validation/source-archive-manifest-*.json
+!artifacts/validation/source-archive-manifest-*.json.sha256

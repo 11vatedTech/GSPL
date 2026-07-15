@@ -1,0 +1,24 @@
+{
+  "schema": "gspl.determinism-report",
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-07-14T20:34:32.117Z",
+  "deterministic": true,
+  "comparedArtifacts": [
+    "claims",
+    "inventions",
+    "manifest",
+    "sources"
+  ],
+  "round1": {
+    "inventions": "sha256:fc69a944fdc77482b6594196e283e40be85239e8170129d89b4e16a1d2ca8d6a",
+    "sources": "sha256:ec774c71d1d3fb923eff415b76ff5dd63e33420998e66db3d52176ff88de404a",
+    "claims": "sha256:37aa846155f1f65d412aec89b2d68a22029c1cfc76dad2e8b731eb16fee1bb0f",
+    "manifest": "sha256:f1f52a5972008fa4cad93569a93a3552399484a34375cf7e112e6415fa08417b"
+  },
+  "round2": {
+    "inventions": "sha256:fc69a944fdc77482b6594196e283e40be85239e8170129d89b4e16a1d2ca8d6a",
+    "sources": "sha256:ec774c71d1d3fb923eff415b76ff5dd63e33420998e66db3d52176ff88de404a",
+    "claims": "sha256:37aa846155f1f65d412aec89b2d68a22029c1cfc76dad2e8b731eb16fee1bb0f",
+    "manifest": "sha256:f1f52a5972008fa4cad93569a93a3552399484a34375cf7e112e6415fa08417b"
+  }
+}

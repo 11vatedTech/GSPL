@@ -1,0 +1,124 @@
+{
+  "schema": "gspl.reference-repository-inventory",
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-07-14T00:00:00Z",
+  "repositories": [
+    {
+      "id": "paradigm-reference",
+      "name": "PAradigm-reference-main",
+      "path": "Reference-repos_and_planning/PAradigm-reference-main/PAradigm-reference-main",
+      "type": "spec",
+      "language": "Markdown",
+      "evidence_strength": "HIGHEST",
+      "key_files": [
+        "spec/00-overview.md",
+        "spec/01-universal-seed.md",
+        "spec/02-gene-system.md",
+        "spec/03-kernel.md",
+        "spec/04-gspl-language.md",
+        "spec/05-sovereignty.md",
+        "spec/06-gseed-format.md",
+        "spec/07-determinism.md",
+        "GLOSSARY.md",
+        "MVP_DEFINITION.md"
+      ],
+      "strengths": [
+        "Complete 8-document canonical spec",
+        "MVP definition with measurable criteria",
+        "Architecture diagrams",
+        "GLOSSARY.md pinned terminology"
+      ],
+      "weaknesses": [
+        "No implementation code",
+        "Some claims empirically-derived, not proven"
+      ],
+      "canonical_inventions_count": 17,
+      "claims_extracted": [
+        "GSPL-CLAIM-0001 (Seed-first programming)",
+        "GSPL-CLAIM-0002 (Canonical projections)",
+        "GSPL-CLAIM-0003 (Architecture synthesis)"
+      ]
+    },
+    {
+      "id": "paradigm-gspl-os",
+      "name": "Paradigm_GSPL_OS-main",
+      "path": "Reference-repos_and_planning/Paradigm_GSPL_OS-main/Paradigm_GSPL_OS-main",
+      "type": "implementation",
+      "language": "TypeScript",
+      "evidence_strength": "HIGH",
+      "key_files": [
+        "src/kernel/index.ts",
+        "src/kernel/seed.ts",
+        "src/kernel/genes.ts",
+        "src/language/index.ts",
+        "src/language/lexer.ts",
+        "src/language/parser.ts",
+        "src/language/interpreter.ts",
+        "src/engines/index.ts",
+        "src/evolution/index.ts",
+        "src/runtime/pipeline.ts",
+        "src/runtime/cli.ts"
+      ],
+      "test_files_count": 13,
+      "source_files_count": 60,
+      "strengths": [
+        "Clean modular kernel/language/evolution/intelligence/composition structure",
+        "Tested CLI",
+        "Studio & Marketplace scaffolding"
+      ],
+      "weaknesses": [
+        "7 gene types (vs spec's 17 INITIAL)",
+        "9 engines (vs spec's 26 domains)",
+        "WEB test report `engines-phase3.test.ts` was not inspected line-by-line"
+      ]
+    },
+    {
+      "id": "generative-seed-programming-gspl",
+      "name": "Generative-Seed-Programming-GSPL--main",
+      "path": "Reference-repos_and_planning/Generative-Seed-Programming-GSPL--main/Generative-Seed-Programming-GSPL--main",
+      "type": "monorepo",
+      "language": "TypeScript",
+      "evidence_strength": "MEDIUM",
+      "package_count": 36,
+      "key_packages": ["core", "seed", "lang", "runtime", "evolution", "sovereignty", "engines", "studio", "desktop", "web", "os", "physics", "levels", "sprites", "media", "narrative", "social", "forge", "store", "search", "export", "network", "lsp", "security"],
+      "strengths": ["Broadest scope (36 packages)"],
+      "weaknesses": ["Many packages stubbed", "Phase reports inflate completion"]
+    },
+    {
+      "id": "gspl-paradigm",
+      "name": "GSPL-Paradigm-main",
+      "path": "Reference-repos_and_planning/GSPL-Paradigm-main/GSPL-Paradigm-main",
+      "type": "workspace",
+      "language": "TypeScript (pnpm workspaces)",
+      "evidence_strength": "LOW",
+      "note": "Duplicate of generative-seed-programming-gspl; same package set with slight renames."
+    },
+    {
+      "id": "paradigm-main",
+      "name": "Paradigm-main",
+      "path": "Reference-repos_and_planning/Paradigm-main (1)/Paradigm-main",
+      "type": "prototype",
+      "language": "TypeScript + Docker + deployment",
+      "evidence_strength": "MEDIUM",
+      "key_subdirectories": ["kernel", "marketplace", "studio", "intelligence", "apps/web"],
+      "strengths": ["Real marketplace code", "Real deployment scaffolding"],
+      "weaknesses": ["Many self-completion reports inflate reality", "Some 'Phase 17 complete' reports contradict observable testing"]
+    },
+    {
+      "id": "paradigm-goe-ai",
+      "name": "Paradigm_GOE_AI-main",
+      "path": "Reference-repos_and_planning/Paradigm_GOE_AI-main/Paradigm_GOE_AI-main",
+      "type": "stubs",
+      "language": "Markdown only",
+      "evidence_strength": "NONE",
+      "note": "Single README that is a Google AI Studio generated template. No GSPL canonical content."
+    }
+  ],
+  "summary": {
+    "total_repositories": 6,
+    "implementations": 4,
+    "specs_only": 1,
+    "stubs_only": 1,
+    "canonical_shortest_path": ["paradigm-reference", "paradigm-gspl-os"]
+  }
+}

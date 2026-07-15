@@ -1,0 +1,40 @@
+{
+  "repos": [
+    {
+      "id": "paradigm-reference",
+      "name": "PAradigm-reference-main",
+      "sourceType": "directory",
+      "source": "Reference-repos_and_planning/PAradigm-reference-main/PAradigm-reference-main"
+    },
+    {
+      "id": "paradigm-gspl-os",
+      "name": "Paradigm_GSPL_OS-main",
+      "sourceType": "directory",
+      "source": "Reference-repos_and_planning/Paradigm_GSPL_OS-main/Paradigm_GSPL_OS-main"
+    },
+    {
+      "id": "generative-seed-gspl",
+      "name": "Generative-Seed-Programming-GSPL--main",
+      "sourceType": "directory",
+      "source": "Reference-repos_and_planning/Generative-Seed-Programming-GSPL--main/Generative-Seed-Programming-GSPL--main"
+    },
+    {
+      "id": "gspl-paradigm",
+      "name": "GSPL-Paradigm-main",
+      "sourceType": "directory",
+      "source": "Reference-repos_and_planning/GSPL-Paradigm-main/GSPL-Paradigm-main"
+    },
+    {
+      "id": "paradigm-main",
+      "name": "Paradigm-main",
+      "sourceType": "directory",
+      "source": "Reference-repos_and_planning/Paradigm-main (1)/Paradigm-main"
+    },
+    {
+      "id": "paradigm-goe-ai",
+      "name": "Paradigm_GOE_AI-main",
+      "sourceType": "directory",
+      "source": "Reference-repos_and_planning/Paradigm_GOE_AI-main/Paradigm_GOE_AI-main"
+    }
+  ]
+}

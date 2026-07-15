@@ -1,0 +1,111 @@
+{
+  "schema": "gspl.conformance-index",
+  "schemaVersion": "1.0",
+  "rules": {
+    "GSPL-DET-001": {
+      "id": "GSPL-DET-001",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST NOT: Canonical IR MUST NOT contain wall-clock time unless seed declares time as semantic input. Impl: packages/ir-model/src/graph.ts. Tests: packages/compiler-core/test/mutation.test.ts",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-DET-002": {
+      "id": "GSPL-DET-002",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: Normalization idempotent: normalize(normalize(x))=normalize(x). Impl: seed-format/src/seed-ops.ts. Tests: property.test.ts",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-DET-003": {
+      "id": "GSPL-DET-003",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: Same input produces identical canonical bytes across all processes and OS. Impl: pipeline.ts. Tests: cross-process.test.ts",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-SEED-001": {
+      "id": "GSPL-SEED-001",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: Canonical seed contains deterministic entropy and effect boundaries. Impl: seed.ts. Tests: seed-format/test/",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-SEED-002": {
+      "id": "GSPL-SEED-002",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: Field-level HASHED/NON_HASHED/DERIVED policy. Impl: seed-ops.ts. Tests: canonicalization.test.ts",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-IR-001": {
+      "id": "GSPL-IR-001",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: Typed attributed directed multi-graph with region scoping. Impl: ir-model/src/graph.ts. Tests: ir-model/test/",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-IR-002": {
+      "id": "GSPL-IR-002",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: Graph normalization idempotent and order-independent. Impl: graph-ops.ts. Tests: property.test.ts",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-GENE-001": {
+      "id": "GSPL-GENE-001",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: Gene types declare schema, canonicalization, validation, lowering, lifting. Impl: gene-protocol/src/types.ts. Tests: gene-protocol/test/",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-GENE-002": {
+      "id": "GSPL-GENE-002",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: Gene registry immutable at runtime. Impl: defaults.ts. Tests: gene-protocol/test/",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-RECON-001": {
+      "id": "GSPL-RECON-001",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "SHALL: Reconstruction from IR produces identical canonical bytes. Impl: ir-reconstructor.ts. Tests: sabotage.test.ts",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-PLAN-001": {
+      "id": "GSPL-PLAN-001",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: Operations have deterministic IDs, inputs, outputs, dependencies. Impl: expansion-plan.ts. Tests: compiler-core/test/",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-HASH-001": {
+      "id": "GSPL-HASH-001",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: SHA-256 over canonicalized input material. Impl: seed-ops.ts. Tests: property.test.ts",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-LIMIT-001": {
+      "id": "GSPL-LIMIT-001",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "SHALL: Resource limits enforced. Impl: pipeline.ts. Tests: adversarial-limits.test.ts",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-PROV-001": {
+      "id": "GSPL-PROV-001",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "MUST: Every IR node carries provenance chain. Impl: ir-model/src/graph.ts. Tests: mutation.test.ts",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    },
+    "GSPL-PACK-001": {
+      "id": "GSPL-PACK-001",
+      "requirementLevel": "RECOMMENDED",
+      "statement": "SHALL: Canonical compilation uses exact locked packages. Impl: package-resolver/src/resolver.ts. Tests: package-resolver/test/",
+      "status": "ACTIVE",
+      "versionIntroduced": "1.0"
+    }
+  }
+}

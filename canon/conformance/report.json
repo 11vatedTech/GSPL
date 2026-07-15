@@ -1,0 +1,9 @@
+{
+  "schema": "gspl.conformance-report",
+  "schemaVersion": "1.0",
+  "totalRules": 15,
+  "mappedRules": 15,
+  "orphanRules": [],
+  "staleReferences": [],
+  "pass": true
+}

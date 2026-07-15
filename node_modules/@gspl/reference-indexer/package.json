@@ -1,0 +1,35 @@
+{
+  "name": "@gspl/reference-indexer",
+  "version": "0.1.0",
+  "description": "GSPL Reference Indexer — walks configured reference repositories, hashes files, detects duplicates, emits stable machine-readable manifests.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "gspl-index": "dist/bin.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "license": "MIT",
+  "author": "11vatedTech <11vated11@gmail.com>",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "devDependencies": {
+    "@types/yauzl": "^3.4.0",
+    "vitest": "^2.0.0"
+  },
+  "dependencies": {
+    "@gspl/types": "*",
+    "yauzl": "^3.4.0"
+  }
+}

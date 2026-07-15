@@ -1,0 +1,23 @@
+{
+  "schema": "gspl.claims-report",
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-07-14T20:34:23.495Z",
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "summary": {
+    "claimsChecked": 12,
+    "byStatus": {
+      "PROVEN": 0,
+      "IMPLEMENTED": 2,
+      "PARTIALLY_IMPLEMENTED": 2,
+      "PROTOTYPED": 2,
+      "THEORETICAL": 2,
+      "RESEARCH_REQUIRED": 2,
+      "UNSUPPORTED": 0,
+      "REFUTED": 2
+    },
+    "illegalTransitions": [],
+    "unsupportedClaims": []
+  }
+}

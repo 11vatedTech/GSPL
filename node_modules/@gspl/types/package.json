@@ -1,0 +1,25 @@
+{
+  "name": "@gspl/types",
+  "version": "1.0.0",
+  "description": "Canonical GSPL type definitions — single source of truth for InventionEntry, SourceRecord, Claim, EvidenceReference, and all shared canon schemas",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "license": "MIT",
+  "author": "11vatedTech <11vated11@gmail.com>",
+  "engines": { "node": ">=20.0.0" },
+  "devDependencies": {
+    "vitest": "^2.0.0"
+  }
+}

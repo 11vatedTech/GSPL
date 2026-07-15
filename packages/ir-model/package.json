@@ -1,0 +1,14 @@
+{
+  "name": "@gspl/ir-model",
+  "version": "0.1.0",
+  "description": "GSPL IR Model — typed attributed graph, constraints/capabilities/effects, diagnostics, provenance",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "scripts": { "build": "tsc", "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "license": "MIT",
+  "engines": { "node": ">=20.0.0" },
+  "dependencies": { "@gspl/canon-foundation": "*", "@gspl/seed-format": "*" },
+  "devDependencies": { "vitest": "^2.0.0" }
+}

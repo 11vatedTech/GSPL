@@ -1,0 +1,36 @@
+{
+  "schema": "gspl.build-test-baseline",
+  "schemaVersion": "1.0",
+  "environment": {
+    "node": "24.18.0",
+    "npm": "11.16.0",
+    "typescript": "5.5+",
+    "vitest": "2.0+",
+    "platform": "win32"
+  },
+  "commands": {
+    "install": "npm install",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "index_references": "node tools/reference-indexer/dist/cli.js --config tools/reference-indexer/repos.config.json --output reference-manifest/source-manifest.json",
+    "check_provenance": "node tools/provenance-checker/dist/cli.js --inventions canon/provenance/inventions.json --decisions docs/audit/architecture-decisions.json --sources canon/provenance/sources.json --report canon/provenance/provenance-report.json",
+    "classify_claims": "node tools/claim-classifier/dist/cli.js --claims canon/provenance/claims.json --report canon/provenance/claims-report.json"
+  },
+  "reference_repos": {
+    "paradigm-reference": { "build_status": "n/a", "test_status": "n/a", "notes": "spec repo, Markdown only" },
+    "paradigm-gspl-os": { "build_status": "PASS per README", "test_status": "13 test files; PASS per README", "notes": "Scheduled full re-run for Prompt 3" },
+    "paradigm-main": { "build_status": "PARTIAL — many 'Phase X complete' reports unverified at file level", "test_status": "MIXED — vitest+playwright", "notes": "Reports inflate truth. Risk-aware." },
+    "generative-seed-programming-gspl": { "build_status": "PASS per npm workspaces", "test_status": "workspaces test scripts present", "notes": "Monorepo build" },
+    "gspl-paradigm": { "build_status": "LIKELY DUPLICATE — pnpm workspace", "test_status": "uncertain", "notes": "Same package scope as gp-gspl" },
+    "paradigm-goe-ai": { "build_status": "n/a", "test_status": "n/a", "notes": "READONLY — Google AI Studio template only, no GSPL content" }
+  },
+  "exit_codes": {
+    "reference_indexer_success": 0,
+    "reference_indexer_bad_args": 64,
+    "provenance_checker_pass": 0,
+    "provenance_checker_fail": 2,
+    "claim_classifier_pass": 0,
+    "claim_classifier_fail": 2
+  }
+}

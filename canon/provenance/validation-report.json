@@ -1,0 +1,40 @@
+{
+  "schema": "gspl.provenance-report",
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-07-14T20:34:24.085Z",
+  "ok": true,
+  "errors": [],
+  "warnings": [],
+  "summary": {
+    "inventionsChecked": 20,
+    "decisionsChecked": 26,
+    "sourcesChecked": 30,
+    "orphanedInventions": [],
+    "orphanedSources": [
+      "S-0007",
+      "S-0008",
+      "S-0011",
+      "S-0012",
+      "S-0013",
+      "S-0014",
+      "S-0015",
+      "S-0016",
+      "S-0017",
+      "S-0018",
+      "S-0019",
+      "S-0020",
+      "S-0021",
+      "S-0022",
+      "S-0023",
+      "S-0024",
+      "S-0025",
+      "S-0026",
+      "S-0027",
+      "S-0028",
+      "S-0029",
+      "S-0030"
+    ],
+    "unresolvedConflicts": [],
+    "absolutePathLeaks": []
+  }
+}

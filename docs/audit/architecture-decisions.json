@@ -1,0 +1,676 @@
+{
+  "schema": "gspl.architecture-decisions",
+  "schemaVersion": "1.0",
+  "generatedAt": "2026-07-14T00:00:00Z",
+  "decisions": [
+    {
+      "id": "GSPL-ARCH-0001",
+      "subsystem": "seed-representation",
+      "disposition": "ADOPT",
+      "rationale": "Genome canonical model per spec/01 and ADR-0001.",
+      "references": [
+        "GSPL-INV-0001"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/01-universal-seed.md"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0002",
+      "subsystem": "gene-model",
+      "disposition": "ADAPT",
+      "rationale": "Initial 17 inventory with extensibility protocol per ADR-0004.",
+      "references": [
+        "GSPL-INV-0002"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/02-gene-system.md"
+        }
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "id": "GSPL-ARCH-0003",
+      "subsystem": "rng",
+      "disposition": "ADOPT",
+      "rationale": "SplitMix64 + xoshiro256** + Box-Muller + FNV-1a per spec/03.",
+      "references": [
+        "GSPL-INV-0003"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/03-kernel.md"
+        },
+        {
+          "repo": "canon-foundation",
+          "file": "src/rng/deterministic.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0004",
+      "subsystem": "hashing",
+      "disposition": "ADOPT",
+      "rationale": "SHA-256 per FIPS 180-4 and ADR-0001 sovereignty.",
+      "references": [
+        "GSPL-INV-0004"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/05-sovereignty.md"
+        },
+        {
+          "repo": "canon-foundation",
+          "file": "src/hash/sha256.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0005",
+      "subsystem": "canonicalization",
+      "disposition": "ADOPT",
+      "rationale": "JCS RFC 8785 with GSPL top-level field ordering.",
+      "references": [
+        "GSPL-INV-0005"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/05-sovereignty.md"
+        },
+        {
+          "repo": "canon-foundation",
+          "file": "src/canonicalize/jcs.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0006",
+      "subsystem": "lineage",
+      "disposition": "ADOPT",
+      "rationale": "Lineage block as in spec/01.",
+      "references": [
+        "GSPL-INV-0006"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/01-universal-seed.md"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0007",
+      "subsystem": "genetic-operators",
+      "disposition": "ADOPT",
+      "rationale": "validate/mutate/crossover/distance/canonicalize per-type operators per spec/02.",
+      "references": [
+        "GSPL-INV-0002",
+        "GSPL-INV-0007"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/02-gene-system.md"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0008",
+      "subsystem": "language-grammar",
+      "disposition": "ADOPT",
+      "rationale": "26 reserved keywords per spec/04 with extensibility governed by ADR-0004.",
+      "references": [
+        "GSPL-INV-0008"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/04-gspl-language.md"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0009",
+      "subsystem": "parser",
+      "disposition": "ADOPT",
+      "rationale": "Recursive-descent parser per spec/04.",
+      "references": [
+        "GSPL-INV-0009"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/04-gspl-language.md"
+        },
+        {
+          "repo": "canon-foundation",
+          "file": "test/parser.test.ts"
+        }
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "id": "GSPL-ARCH-0010",
+      "subsystem": "ast",
+      "disposition": "ADOPT",
+      "rationale": "Typed AST as the canonical IR-candidate per spec/04.",
+      "references": [
+        "GSPL-INV-0010"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/04-gspl-language.md"
+        }
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "id": "GSPL-ARCH-0011",
+      "subsystem": "interpreter",
+      "disposition": "ADOPT",
+      "rationale": "AST interpreter per spec/04.",
+      "references": [
+        "GSPL-INV-0011"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/04-gspl-language.md"
+        }
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "id": "GSPL-ARCH-0012",
+      "subsystem": "compiler",
+      "disposition": "RESEARCH",
+      "rationale": "GSPL-to-JS code generation is prototyped but not yet production-grade; deferred to Prompt 2.",
+      "references": [
+        "GSPL-INV-0012"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/04-gspl-language.md"
+        }
+      ],
+      "confidence": "LOW"
+    },
+    {
+      "id": "GSPL-ARCH-0013",
+      "subsystem": "ir",
+      "disposition": "RESEARCH",
+      "rationale": "Canonical IR is not closed across references yet; ADR-0008 marks as research.",
+      "references": [
+        "GSPL-INV-0013"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-gspl-os",
+          "file": "src/runtime/cli.ts"
+        }
+      ],
+      "confidence": "LOW"
+    },
+    {
+      "id": "GSPL-ARCH-0014",
+      "subsystem": "runtime",
+      "disposition": "ADOPT",
+      "rationale": "8-phase tick cycle scaffolding adopted per spec/03.",
+      "references": [
+        "GSPL-INV-0013"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/03-kernel.md"
+        },
+        {
+          "repo": "canon-foundation",
+          "file": "src/tick/cycle.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0015",
+      "subsystem": "state",
+      "disposition": "RESEARCH",
+      "rationale": "8 algebraic effects are planned; current canon-foundation only stubs the cycle.",
+      "references": [
+        "GSPL-INV-0014"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/03-kernel.md"
+        }
+      ],
+      "confidence": "LOW"
+    },
+    {
+      "id": "GSPL-ARCH-0016",
+      "subsystem": "packages",
+      "disposition": "ADAPT",
+      "rationale": ".gseed format and package extensions per spec/06.",
+      "references": [
+        "GSPL-INV-0015"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/06-gseed-format.md"
+        },
+        {
+          "repo": "canon-foundation",
+          "file": "src/constants.ts"
+        }
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "id": "GSPL-ARCH-0017",
+      "subsystem": "translation",
+      "disposition": "RESEARCH",
+      "rationale": "Graduated fidelity (RC-1..RC-8) per ADR-0007; full translation-bridge is research.",
+      "references": [
+        "GSPL-INV-0016"
+      ],
+      "evidence": [
+        {
+          "repo": "canon-foundation",
+          "file": "docs/canon/GSPL_TRANSLATION_BRIDGE_MODEL.md"
+        }
+      ],
+      "confidence": "LOW"
+    },
+    {
+      "id": "GSPL-ARCH-0018",
+      "subsystem": "studio",
+      "disposition": "REJECT",
+      "rationale": "Studio UI is out-of-canon per ADR-0010.",
+      "references": [
+        "GSPL-INV-0019"
+      ],
+      "evidence": [
+        {
+          "repo": "canon-foundation",
+          "file": "docs/canon/GSPL_SCOPE_AND_NON_GOALS.md"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0019",
+      "subsystem": "cli",
+      "disposition": "ADOPT",
+      "rationale": "Adapt paradigm-gspl-os CLI shape, governed by ADR-0009.",
+      "references": [
+        "GSPL-INV-0019"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-gspl-os",
+          "file": "src/runtime/cli.ts"
+        },
+        {
+          "repo": "canon-foundation",
+          "file": "docs/canon/GSPL_TRANSLATION_BRIDGE_MODEL.md"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0020",
+      "subsystem": "api",
+      "disposition": "REJECT",
+      "rationale": "REST/api out of canon per ADR-0010.",
+      "references": [
+        "GSPL-INV-0020"
+      ],
+      "evidence": [
+        {
+          "repo": "canon-foundation",
+          "file": "docs/canon/GSPL_SCOPE_AND_NON_GOALS.md"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0021",
+      "subsystem": "lsp",
+      "disposition": "RESEARCH",
+      "rationale": "LSP is research-only; canonical language is lower priority than sovereignty.",
+      "references": [
+        "GSPL-INV-0009"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/04-gspl-language.md"
+        }
+      ],
+      "confidence": "LOW"
+    },
+    {
+      "id": "GSPL-ARCH-0022",
+      "subsystem": "testing",
+      "disposition": "ADOPT",
+      "rationale": "Vitest-based canon test framework adapted from paradigm-gspl-os.",
+      "references": [
+        "GSPL-INV-0020"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-gspl-os",
+          "file": "vitest.config.ts"
+        },
+        {
+          "repo": "canon-foundation",
+          "file": "vitest.config.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0023",
+      "subsystem": "persistence",
+      "disposition": "ADOPT",
+      "rationale": "Sovereignty-driven naming of KB by SHA-256 hash per spec/05.",
+      "references": [
+        "GSPL-INV-0017"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/05-sovereignty.md"
+        },
+        {
+          "repo": "canon-foundation",
+          "file": "src/hash/sha256.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0024",
+      "subsystem": "security",
+      "disposition": "ADOPT",
+      "rationale": "ECDSA P-256 + RFC 6979 deterministic signing per spec/05; ADR-0001 forbids ad-hoc crypto.",
+      "references": [
+        "GSPL-INV-0017"
+      ],
+      "evidence": [
+        {
+          "repo": "paradigm-reference",
+          "file": "spec/05-sovereignty.md"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0025",
+      "subsystem": "plugin-model",
+      "disposition": "RESEARCH",
+      "rationale": "Plugin model is research-only; ADR-0007 records deferral to Prompt 5.",
+      "references": [
+        "GSPL-INV-0018"
+      ],
+      "evidence": [
+        {
+          "repo": "canon-foundation",
+          "file": "docs/canon/GSPL_SEED_MODEL_CANDIDATES.md"
+        }
+      ],
+      "confidence": "LOW"
+    },
+    {
+      "id": "GSPL-ARCH-0026",
+      "subsystem": "dependency-security",
+      "disposition": "ADAPT",
+      "rationale": "npm audit reports 6 devDependency vulnerabilities: 2 critical (vitest UI, @vitest/coverage-v8), 1 high (vite), 3 moderate (esbuild, @vitest/mocker, vite-node). All in vitest->vite->esbuild chain. Accepted because: (1) all are dev-server vulnerabilities never exposed during canon operations, (2) GSPL uses vitest run CLI-only with no network ports, (3) no distributed package includes these deps, (4) vitest 4.x upgrade is breaking without reducing actual attack surface.",
+      "references": [],
+      "evidence": [
+        {
+          "repo": "canon-foundation",
+          "file": "package.json"
+        },
+        {
+          "repo": "canon-foundation",
+          "file": "vitest.config.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0027",
+      "subsystem": "canonical-representation",
+      "disposition": "ADOPT",
+      "rationale": "Selected Model D (Layered Hybrid): 5-layer stack adopted. Scored highest across 18 criteria. Maps to packages: seed-format (L1), ir-model (L2), compiler-core (L3-L4).",
+      "references": [
+        "GSPL-INV-0001",
+        "GSPL-INV-0013"
+      ],
+      "evidence": [
+        {
+          "repo": "canon-foundation",
+          "file": "docs/canon/GSPL_SEED_MODEL_CANDIDATES.md"
+        },
+        {
+          "repo": "compiler-core",
+          "file": "test/model-evaluation.test.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0028",
+      "subsystem": "seed-model",
+      "disposition": "ADOPT",
+      "rationale": "CanonicalSeed schema v1.0 with full Prompt 2 fields: identity, namespace, domain, intent, payload, constraints, dependencies, entropy, lineage, provenance, budget, permissions. Hash/non-hash separation per 4.2.",
+      "references": [
+        "GSPL-INV-0001",
+        "GSPL-INV-0005"
+      ],
+      "evidence": [
+        {
+          "repo": "seed-format",
+          "file": "src/seed.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0029",
+      "subsystem": "gene-protocol",
+      "disposition": "ADOPT",
+      "rationale": "Extensible versioned gene registry adopted. 17 types classified: 12 CORE, 4 LIBRARY, 1 SECURITY. Immutable registry with validation.",
+      "references": [
+        "GSPL-INV-0002",
+        "GSPL-INV-0007"
+      ],
+      "evidence": [
+        {
+          "repo": "gene-protocol",
+          "file": "src/types.ts"
+        },
+        {
+          "repo": "gene-protocol",
+          "file": "src/dispositions.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0030",
+      "subsystem": "ir-graph-model",
+      "disposition": "ADOPT",
+      "rationale": "Typed attributed IR graph: directed, multi-edge, region-based, content-addressed. 15 node kinds, 11 edge kinds. Deterministic normalization with SHA-256 hashing.",
+      "references": [
+        "GSPL-INV-0010",
+        "GSPL-INV-0013"
+      ],
+      "evidence": [
+        {
+          "repo": "ir-model",
+          "file": "src/graph.ts"
+        },
+        {
+          "repo": "ir-model",
+          "file": "src/graph-ops.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0031",
+      "subsystem": "graph-normalization",
+      "disposition": "ADOPT",
+      "rationale": "Canonical graph normalization: nodes by ID, edges by (from,to,kind), regions by ID. Idempotent. SHA-256 over deterministic serialization.",
+      "references": [
+        "GSPL-INV-0010"
+      ],
+      "evidence": [
+        {
+          "repo": "ir-model",
+          "file": "src/graph-ops.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0032",
+      "subsystem": "entropy",
+      "disposition": "ADOPT",
+      "rationale": "Hierarchical entropy channels: SplitMix64 with labeled forks. 6 standard channels. Order-independent for cross-process reproducibility. Golden vectors locked.",
+      "references": [
+        "GSPL-INV-0003"
+      ],
+      "evidence": [
+        {
+          "repo": "canon-foundation",
+          "file": "src/rng/entropy-channels.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0033",
+      "subsystem": "packages",
+      "disposition": "ADOPT",
+      "rationale": "Context/Knowledge/Rule package contracts adopted. Each: stable identity, version, content hash, protocol compatibility, dependencies, licenses, provenance.",
+      "references": [
+        "GSPL-INV-0015"
+      ],
+      "evidence": [
+        {
+          "repo": "seed-format",
+          "file": "src/packages.ts"
+        }
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "id": "GSPL-ARCH-0034",
+      "subsystem": "constraint-model",
+      "disposition": "ADOPT",
+      "rationale": "Constraint/Capability/Effect separation adopted. Constraints: value ranges, structural, targets, performance. Capabilities: declared operations. Effects: explicit grants, default ALL DENIED.",
+      "references": [
+        "GSPL-INV-0014"
+      ],
+      "evidence": [
+        {
+          "repo": "ir-model",
+          "file": "src/constraints.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0035",
+      "subsystem": "artifact-graph",
+      "disposition": "ADOPT",
+      "rationale": "Target-neutral artifact graph: 12 kinds (source, module, asset, scene, config, test, doc, metadata, binary, interactive, fixture, media). 8 relationship types.",
+      "references": [
+        "GSPL-INV-0013"
+      ],
+      "evidence": [
+        {
+          "repo": "compiler-core",
+          "file": "src/artifact-graph.ts"
+        }
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "id": "GSPL-ARCH-0036",
+      "subsystem": "serialization",
+      "disposition": "ADOPT",
+      "rationale": "Canonical serialization: Unicode NFKC, negative zero normalization, base64url binary encoding, UTC timestamp normalization, deterministic number serialization. JCS (RFC 8785) base.",
+      "references": [
+        "GSPL-INV-0005"
+      ],
+      "evidence": [
+        {
+          "repo": "canon-foundation",
+          "file": "src/canonicalize/serialization.ts"
+        }
+      ],
+      "confidence": "HIGH"
+    },
+    {
+      "id": "GSPL-ARCH-0037",
+      "subsystem": "versioning",
+      "disposition": "ADOPT",
+      "rationale": "Schema versioning and migration: 5 migration kinds, multi-step paths, migration provenance, compatibility checking, deprecation policy.",
+      "references": [
+        "GSPL-INV-0001",
+        "GSPL-INV-0016"
+      ],
+      "evidence": [
+        {
+          "repo": "canon-foundation",
+          "file": "src/migration/versioning.ts"
+        }
+      ],
+      "confidence": "MEDIUM"
+    },
+    {
+      "id": "GSPL-ARCH-0038",
+      "subsystem": "package-boundaries",
+      "disposition": "ADOPT",
+      "rationale": "5-package architecture: canon-foundation -> gene-protocol -> seed-format -> ir-model -> compiler-core. Strict dependency direction. No circular deps, no global singletons.",
+      "references": [
+        "GSPL-INV-0013",
+        "GSPL-INV-0015"
+      ],
+      "evidence": [
+        {
+          "repo": "canon-foundation",
+          "file": "package.json"
+        },
+        {
+          "repo": "compiler-core",
+          "file": "package.json"
+        }
+      ],
+      "confidence": "HIGH"
+    }
+  ]
+}

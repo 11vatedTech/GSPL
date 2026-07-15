@@ -1,0 +1,378 @@
+{
+  "claims": [
+    {
+      "claimId": "GSPL-CLAIM-0001",
+      "conditions": [
+        "Same $gst schema version (currently 1.0)",
+        "Same knowledge version as resolved at run time",
+        "Compatible with an established 8-phase tick cycle"
+      ],
+      "counterEvidence": [
+        {
+          "file": "spec/04-gspl-language.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "packages/canon-foundation/src/constants.ts",
+          "repo": "canon-foundation"
+        },
+        {
+          "file": "spec/07-determinism.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "falsificationCriteria": [
+        "Two independent builds of the same seed produce different hashes",
+        "A canonical seed cannot be re-derived from its program output",
+        "Cross-language projection diverges from the canonical reference output"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0001",
+        "GSPL-INV-0014"
+      ],
+      "scope": "Within packages/canon-foundation and the supplied reference architectures only; does not yet include cross-language, end-to-end seed-to-artifact tests for arbitrary programs. [Prompt 2: Prompt 2: Gene Protocol implemented, seed-to-IR-to-plan pipeline skeleton built, entropy channels with golden vectors verified, constraint/capability/effect model distinct.]",
+      "statement": "The Core GSPL hypothesis is provisionally viable: supported by foundational implementation, not yet proven by end-to-end program reconstruction. Promotion to PROVEN requires seed-to-codebase reconstruction, deterministic recompilation, nontrivial architecture synthesis, behavioral equivalence, cross-language projection, test preservation, and reproducibility from independently repeated builds.",
+      "status": "PROTOTYPED",
+      "verificationMethod": "Run npm test in packages/canon-foundation; cross-check two independent seed expansions produce byte-identical canonical hashes (Prompts 2-3 deliver tests)."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0002",
+      "conditions": [
+        "No special-purpose or lossy compression attempted."
+      ],
+      "counterEvidence": [
+        {
+          "file": "spec/07-determinism.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "spec/01-universal-seed.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "falsificationCriteria": [
+        "A constructive universal compressor is published with formal correctness proof",
+        "Kolmogorov-incompressible strings are shown to be compressible in practice"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0005"
+      ],
+      "scope": "Universal; applies to all candidate compression schemes including any that GSPL might propose. Defended via Kolmogorov complexity (1965).",
+      "statement": "Universal arbitrary-data compression (one shorter description for every input) is REFUTED.",
+      "status": "REFUTED",
+      "verificationMethod": "Cite Kolmogorov (1965) and standard textbooks on algorithmic information theory; no implementation necessary."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0003",
+      "conditions": [
+        "Both paradigms are Turing-complete"
+      ],
+      "counterEvidence": [
+        {
+          "file": "spec/04-gspl-language.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "evidence": [
+        {
+          "file": "docs/canon/GSPL_TRANSLATION_BRIDGE_MODEL.md",
+          "repo": "canon-foundation"
+        }
+      ],
+      "falsificationCriteria": [
+        "A constructive proof of perfect translation between two paradigms is published",
+        "Two paradigms are shown to differ only in notation, not in semantics"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0016"
+      ],
+      "scope": "Universal; applies to any candidate perfect-translation theorem between Turing-complete paradigms. The graduated-fidelity claim stands.",
+      "statement": "Perfect universal cross-paradigm translation is REFUTED. Translation between programming paradigms loses structural meaning because paradigms encode non-equivalent semantic invariants. GSPL supports GRADUATED translation fidelity (RC-1..RC-8) but not perfect translation.",
+      "status": "REFUTED",
+      "verificationMethod": "Cite Felleisen (1991) on the expressive power of programming languages; argue structural non-equivalence of paradigms."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0004",
+      "conditions": [
+        "Seed in scope of canonical $gst schema",
+        "Knowledge version matches the interpreter build",
+        "No external state leaks"
+      ],
+      "counterEvidence": [],
+      "evidence": [
+        {
+          "file": "packages/canon-foundation/src/types/universal-seed.ts",
+          "repo": "canon-foundation"
+        },
+        {
+          "file": "packages/canon-foundation/src/tick/cycle.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "falsificationCriteria": [
+        "Two runs of the same seed produce different outputs",
+        "The reconstructed program is observably different from the original"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0001",
+        "GSPL-INV-0011",
+        "GSPL-INV-0014"
+      ],
+      "scope": "For seeds expanded by the canonical canon-foundation interpreter and codegen pipeline over a closed set of canonical gene types. [Prompt 2: Prompt 2: 5-layer pipeline (Authoring->Seed->IR->Plan->Artifact) implemented. Compiler context with resource limits. 3 reference fixtures (software architecture, interactive scene, mixed video/game) defined.]",
+      "statement": "Seed-first program reconstruction: given a GSPL seed, the canonical program it represents can be reconstructed (artefact and intermediate state both derivable from the seed).",
+      "status": "PROTOTYPED",
+      "verificationMethod": "Run the canonical interpreter twice with the same seed + knowledge version and assert output equivalence via SHA-256 (Prompt 2 delivers the test)."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0005",
+      "conditions": [
+        "A seed uses the canonical combinator gene types",
+        "A canonical knowledge version is loaded",
+        "Targets are within the documented scope"
+      ],
+      "counterEvidence": [],
+      "evidence": [
+        {
+          "file": "spec/02-gene-system.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "falsificationCriteria": [
+        "Two projections of the same seed against the same target do not produce equivalent artifacts",
+        "A combinator type fails the per-type property tests"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0007",
+        "GSPL-INV-0012"
+      ],
+      "scope": "Within the design contract of the 17 initial gene types; targets JavaScript and WGSL-class architectures. [Prompt 2: Prompt 2: Gene Protocol replaces fixed 17 with extensible registry. Multi-projection model supported through target contracts in seed dependencies. 3 reference fixtures span different target types.]",
+      "statement": "The Canonical multi-projection model allows a single seed to be projected into multiple target architectures through the `struct`, `graph`, `topology`, and `field` gene-combinator types. The mechanism is DESIGNED but not yet production-validated across architectures.",
+      "status": "PROTOTYPED",
+      "verificationMethod": "Build a 3-target projection test in Prompt 3: parse, lower, and hash against three independent Hash implementations."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0006",
+      "conditions": [
+        "Per-type property tests are exhaustive",
+        "Composition is closed under the 5-operator suite",
+        "No third-party gene extension is implicit"
+      ],
+      "counterEvidence": [],
+      "evidence": [
+        {
+          "file": "spec/02-gene-system.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "falsificationCriteria": [
+        "A gene type T can be emulated by composition of other types",
+        "A counterexample gene-type removal is shown to be recoverable"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0002",
+        "GSPL-INV-0007"
+      ],
+      "scope": "Universe of canonical gene types as defined in spec/02; the claim is open to hostile review. [Prompt 2: Prompt 2: 17 types classified (12 CORE, 4 LIBRARY, 1 SECURITY). Irreducibility remains research-only; extensible protocol makes removal unnecessary.]",
+      "statement": "The initial 17-gene inventory is IRREDUCIBLE: removing any one of the 17 gene types loses expressiveness that cannot be recovered by composing the rest. This claim is empirically motivated in spec/02 but is NOT proven; it remains RESEARCH_REQUIRED.",
+      "status": "RESEARCH_REQUIRED",
+      "verificationMethod": "Hotile review: identify a candidate gene type T and attempt to emulate it by composition of the other 16; if any composition reconstructs T, the claim is falsified."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0007",
+      "conditions": [
+        "Same $gst schema version",
+        "Same knowledge version",
+        "Same input seed",
+        "Identical determinism stack"
+      ],
+      "counterEvidence": [],
+      "evidence": [
+        {
+          "file": "spec/07-determinism.md",
+          "repo": "paradigm-reference"
+        },
+        {
+          "file": "src/rng/deterministic.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "falsificationCriteria": [
+        "Two architectures produce different hashes for the same input",
+        "A non-canonical RNG introduces divergence"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0003"
+      ],
+      "scope": "Architectures that implement the canon-foundation determinism stack without algorithmic substitution.",
+      "statement": "Cross-architecture determinism: a GSPL program expanded identically on two architectures produces byte-identical canonical outputs. Limited to architectures that implement the SplitMix64 + xoshiro256** + FNV-1a + Box-Muller stack without substitution.",
+      "status": "RESEARCH_REQUIRED",
+      "verificationMethod": "Run an identical seed expansion on two architectures; assert hash match."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0008",
+      "conditions": [
+        "Types are encoded per RFC 8785 JCS exactly.",
+        "Top-level field ordering follows the GSPL convention."
+      ],
+      "counterEvidence": [],
+      "evidence": [
+        {
+          "file": "src/canonicalize/jcs.ts",
+          "repo": "canon-foundation"
+        },
+        {
+          "file": "src/hash/sha256.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "falsificationCriteria": [
+        "A NIST test vector fails",
+        "Two equivalent inputs produce different JCS canonical encodings"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0005",
+        "GSPL-INV-0004"
+      ],
+      "scope": "Within packages/canon-foundation. [Prompt 2: Prompt 2: Canonical serialization refined (Unicode NFKC, base64url, timestamp normalization). JCS + SHA-256 stack unchanged.]",
+      "statement": "GSPL canonical types (Genome, Assertion, Lineage, Authorization) emit JCS-canonical encoding of their structure and SHA-256 the encoding to a stable identifier.",
+      "status": "IMPLEMENTED",
+      "verificationMethod": "NIST FIPS 180-4 vectors and RFC 8785 test vectors pinned in `src/canonicalize/jcs.test.ts`."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0009",
+      "conditions": [
+        "Inventions + sources + claims + architecture-decisions JSON exist",
+        "Tool can resolve references and detect orphans",
+        "Tool exits 0 on PASS, 2 on FAIL"
+      ],
+      "counterEvidence": [],
+      "evidence": [
+        {
+          "file": "canon/provenance/inventions.json",
+          "repo": "canon-foundation"
+        },
+        {
+          "file": "canon/provenance/sources.json",
+          "repo": "canon-foundation"
+        }
+      ],
+      "falsificationCriteria": [
+        "A malformed invention ID is accepted",
+        "Orphan inventions pass undetected",
+        "Report is non-deterministic across reruns"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0020"
+      ],
+      "scope": "Within packages/provenance-checker and the bootstrap pipeline.",
+      "statement": "The provenance checker has validated the actual canonical registries (inventions.json, sources.json, claims.json, architecture-decisions.json) end-to-end and produced a deterministic validation report. Status is IMPLEMENTED only after this end-to-end execution succeeds.",
+      "status": "IMPLEMENTED",
+      "verificationMethod": "Run `npm run check:provenance` and inspect the report; assert zero errors."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0010",
+      "conditions": [
+        "Seed uses canonical combinator gene types",
+        "A canonical architecture target is provided",
+        "No third-party architecture override is in effect"
+      ],
+      "counterEvidence": [],
+      "evidence": [
+        {
+          "file": "spec/02-gene-system.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "falsificationCriteria": [
+        "A synthesized architecture lacks the structural requirements of the target",
+        "Test preservation rate across synthesis drops below documented threshold"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0007",
+        "GSPL-INV-0010"
+      ],
+      "scope": "Architecture synthesis from arbitrary seed input across the 26 domains; the per-type combinator layer is design-correct but end-to-end unverified. [Prompt 2: Prompt 2: Architecture synthesis supported through target contracts and reference fixtures. Gene combinator types (graph, topology, struct) provide the representation substrate.]",
+      "statement": "Architecture synthesis through the `struct`, `graph`, `topology`, and `field` gene types is a DESIGN CAPABILITY of the gene inventory. Robust end-to-end architecture synthesis is not yet proven; current implementation is a prototype.",
+      "status": "PROTOTYPED",
+      "verificationMethod": "A canonical synthesis test (Prompt 4) takes a seed and synthesizes a target architecture; asserts structural integrity and per-type operator satisfaction."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0011",
+      "conditions": [
+        "Tests are written in canonical AST or higher",
+        "Compile and interpret targets are within the canon",
+        "No external IO is performed during the test"
+      ],
+      "counterEvidence": [],
+      "evidence": [
+        {
+          "file": "packages/canon-foundation/test/gene-types.test.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "falsificationCriteria": [
+        "A round-tripped test produces different output than the canonical version",
+        "Test pass count changes after round-tripping"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0011",
+        "GSPL-INV-0012",
+        "GSPL-INV-0020"
+      ],
+      "scope": "Within gene-types property suite and determinism tests; broader coverage is pending.",
+      "statement": "Test suites round-trip through compilation: tests written canonically survive AST interpretation, codegen, and re-interpretation with output equivalent to the canonical form. Currently PARTIALLY_IMPLEMENTED: round-tripping is verified for the gene-types property suite but not for arbitrary hand-written tests.",
+      "status": "PARTIALLY_IMPLEMENTED",
+      "verificationMethod": "Run the canonical tests and the canonical-compiled equivalents; assert pass counts and output equivalence."
+    },
+    {
+      "claimId": "GSPL-CLAIM-0012",
+      "conditions": [
+        "Same build inputs (seed, knowledge version)",
+        "Same canon-foundation determinism stack",
+        "No wall-clock-dependent inputs"
+      ],
+      "counterEvidence": [],
+      "evidence": [
+        {
+          "file": "src/rng/deterministic.ts",
+          "repo": "canon-foundation"
+        },
+        {
+          "file": "src/hash/sha256.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "falsificationCriteria": [
+        "Two repeatable builds produce different artifacts",
+        "A wall-clock input leaks into the canonical encoding"
+      ],
+      "lastReviewed": "2026-07-14",
+      "relatedInventions": [
+        "GSPL-INV-0003",
+        "GSPL-INV-0004"
+      ],
+      "scope": "Within the canon-foundation determinism stack. Cross-architecture coverage is RESEARCH_REQUIRED in GSPL-CLAIM-0007. [Prompt 2: Prompt 2: Deterministic entropy channels with golden vectors verified. Order-independent forks ensure cross-process reproducibility. 63 entropy tests pass.]",
+      "statement": "Independently repeated builds of the same seed produce byte-identical canonical gseed content. The canon-foundation determinism stack supports this for in-process runs; cross-host reproducibility (e.g. Windows + Linux) is PROTOTYPED via the deterministic RNG stack but full coverage tests are pending.",
+      "status": "IMPLEMENTED",
+      "verificationMethod": "Run `npm run build` twice; assert byte-identical artifacts."
+    }
+  ],
+  "generatedAt": "2026-07-14T21:10:13.247Z",
+  "schema": "gspl.claims",
+  "schemaVersion": "1.0"
+}

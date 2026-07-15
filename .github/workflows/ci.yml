@@ -1,0 +1,26 @@
+name: GSPL Canon CI
+on: [push, pull_request]
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: ["20", "22"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npm test
+      - run: npm run test:property
+      - run: npm run test:fuzz:ci
+      - run: npm run test:mutation
+      - run: npm run check:roundtrip
+      - run: npm run check:packages
+      - run: npm run check:determinism
+      - run: npm run check:conformance
+      - run: npm run validate

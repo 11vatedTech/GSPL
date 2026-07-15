@@ -1,0 +1,202 @@
+{
+  "generatedAt": "2026-07-14T18:11:13.184Z",
+  "subsystems": [
+    {
+      "subsystem": "kernel",
+      "inventions": [
+        {
+          "id": "GSPL-INV-0001",
+          "name": "Genome canonical seed model",
+          "disposition": "ADOPT",
+          "status": "partial"
+        },
+        {
+          "id": "GSPL-INV-0003",
+          "name": "Deterministic RNG stack",
+          "disposition": "ADOPT",
+          "status": "complete"
+        },
+        {
+          "id": "GSPL-INV-0004",
+          "name": "SHA-256 content addressing",
+          "disposition": "ADOPT",
+          "status": "complete"
+        },
+        {
+          "id": "GSPL-INV-0005",
+          "name": "JCS RFC 8785 canonicalization",
+          "disposition": "ADOPT",
+          "status": "complete"
+        },
+        {
+          "id": "GSPL-INV-0006",
+          "name": "Lineage block",
+          "disposition": "ADOPT",
+          "status": "complete"
+        }
+      ],
+      "adopts": 5,
+      "adapts": 0,
+      "rewrites": 0,
+      "researches": 0,
+      "archives": 0,
+      "rejects": 0
+    },
+    {
+      "subsystem": "gene-system",
+      "inventions": [
+        {
+          "id": "GSPL-INV-0002",
+          "name": "Initial 17-type gene inventory",
+          "disposition": "ADAPT",
+          "status": "complete"
+        },
+        {
+          "id": "GSPL-INV-0007",
+          "name": "Per-gene-type 5-operator suite",
+          "disposition": "ADAPT",
+          "status": "partial"
+        }
+      ],
+      "adopts": 0,
+      "adapts": 2,
+      "rewrites": 0,
+      "researches": 0,
+      "archives": 0,
+      "rejects": 0
+    },
+    {
+      "subsystem": "language",
+      "inventions": [
+        {
+          "id": "GSPL-INV-0008",
+          "name": "26-keyword reserved language grammar",
+          "disposition": "ADAPT",
+          "status": "partial"
+        },
+        {
+          "id": "GSPL-INV-0009",
+          "name": "Recursive-descent GSPL parser",
+          "disposition": "ADOPT",
+          "status": "partial"
+        }
+      ],
+      "adopts": 1,
+      "adapts": 1,
+      "rewrites": 0,
+      "researches": 0,
+      "archives": 0,
+      "rejects": 0
+    },
+    {
+      "subsystem": "compiler",
+      "inventions": [
+        {
+          "id": "GSPL-INV-0010",
+          "name": "Typed AST (25+ nodes)",
+          "disposition": "ADOPT",
+          "status": "partial"
+        },
+        {
+          "id": "GSPL-INV-0012",
+          "name": "AST to JavaScript compiler (codegen)",
+          "disposition": "ADAPT",
+          "status": "partial"
+        },
+        {
+          "id": "GSPL-INV-0013",
+          "name": "Canonical GSPL IR (research)",
+          "disposition": "RESEARCH",
+          "status": "spec-only"
+        }
+      ],
+      "adopts": 1,
+      "adapts": 1,
+      "rewrites": 0,
+      "researches": 1,
+      "archives": 0,
+      "rejects": 0
+    },
+    {
+      "subsystem": "runtime",
+      "inventions": [
+        {
+          "id": "GSPL-INV-0011",
+          "name": "AST interpreter",
+          "disposition": "ADAPT",
+          "status": "partial"
+        },
+        {
+          "id": "GSPL-INV-0014",
+          "name": "8-phase runtime tick cycle",
+          "disposition": "ADOPT",
+          "status": "partial"
+        },
+        {
+          "id": "GSPL-INV-0015",
+          "name": "8 algebraic-effect system (research)",
+          "disposition": "RESEARCH",
+          "status": "spec-only"
+        }
+      ],
+      "adopts": 1,
+      "adapts": 1,
+      "rewrites": 0,
+      "researches": 1,
+      "archives": 0,
+      "rejects": 0
+    },
+    {
+      "subsystem": "package-system",
+      "inventions": [
+        {
+          "id": "GSPL-INV-0016",
+          "name": ".gseed binary container format",
+          "disposition": "ADAPT",
+          "status": "partial"
+        },
+        {
+          "id": "GSPL-INV-0019",
+          "name": "GSPL CLI surface",
+          "disposition": "ADOPT",
+          "status": "partial"
+        }
+      ],
+      "adopts": 1,
+      "adapts": 1,
+      "rewrites": 0,
+      "researches": 0,
+      "archives": 0,
+      "rejects": 0
+    },
+    {
+      "subsystem": "canon-governance",
+      "inventions": [
+        {
+          "id": "GSPL-INV-0017",
+          "name": "ECDSA P-256 + RFC 6979 sovereignty",
+          "disposition": "ADOPT",
+          "status": "partial"
+        },
+        {
+          "id": "GSPL-INV-0018",
+          "name": "Seven-axis structural contract",
+          "disposition": "ADOPT",
+          "status": "partial"
+        },
+        {
+          "id": "GSPL-INV-0020",
+          "name": "Vitest-based canon test framework",
+          "disposition": "ADOPT",
+          "status": "complete"
+        }
+      ],
+      "adopts": 3,
+      "adapts": 0,
+      "rewrites": 0,
+      "researches": 0,
+      "archives": 0,
+      "rejects": 0
+    }
+  ]
+}

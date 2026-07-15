@@ -1,0 +1,657 @@
+{
+  "generatedAt": "2026-07-14T00:00:00.000Z",
+  "inventions": [
+    {
+      "aliases": [
+        "UniversalSeed",
+        "gseed genome",
+        "Genome"
+      ],
+      "canonicalName": "Genome canonical seed model",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0001",
+      "definition": "A typed Genome is the canonical form of a GSPL seed: $gst, $domain, $lineage, and a genes map of named Gene values.",
+      "dependencies": [
+        "GSPL-INV-0004",
+        "GSPL-INV-0005",
+        "GSPL-INV-0006"
+      ],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "spec/01-universal-seed.md",
+          "repo": "paradigm-reference"
+        },
+        {
+          "file": "src/types/universal-seed.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "founderIntent": "A typed Genome is the canonical form of a GSPL seed. It carries $gst (schema version), $domain (one of 26), $lineage (operation + parents + generation + optional timestamp), and a genes map of named Gene values keyed by gene name.",
+      "id": "GSPL-INV-0001",
+      "implementationStatus": "partial",
+      "problemSolved": "Programs need a stable, addressable, hashable canonical representation.",
+      "risks": [
+        "Schema drift if $gst version is bumped without a corresponding ADR",
+        "Ambiguity if gene names are duplicated across the 17-type inventory"
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "kernel"
+    },
+    {
+      "aliases": [
+        "17 gene types",
+        "INITIAL_STANDARD_LIBRARY_INVENTORY"
+      ],
+      "canonicalName": "Initial 17-type gene inventory",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0004",
+      "definition": "Empirically-derived initial inventory of 17 gene types: scalar, categorical, vector, expression, struct, array, graph, topology, temporal, regulatory, field, symbolic, quantum, gematria, resonance, dimensional, sovereignty.",
+      "dependencies": [
+        "GSPL-INV-0001"
+      ],
+      "disposition": "ADAPT",
+      "evidence": [
+        {
+          "file": "spec/02-gene-system.md",
+          "repo": "paradigm-reference"
+        },
+        {
+          "file": "src/types/gene-types.ts",
+          "repo": "canon-foundation"
+        },
+        {
+          "file": "src/constants.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "founderIntent": "The 17 gene types are the INITIAL STANDARD LIBRARY INVENTORY empirically derived by implementing 26 domain engines under spec/02. They are EXTENSIBLE per the EXTENSIBILITY PROTOCOL.",
+      "id": "GSPL-INV-0002",
+      "implementationStatus": "complete",
+      "problemSolved": "Composability requires a finite, type-tagged set of gene primitives with per-type (validate, mutate, crossover, distance, canonicalize) operators.",
+      "risks": [
+        "Reading 17 as a closed set is denied by ADR-0004."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "gene-system"
+    },
+    {
+      "aliases": [
+        "SplitMix+xoshiro+FNV",
+        "deterministic RNG"
+      ],
+      "canonicalName": "Deterministic RNG stack",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0001",
+      "definition": "A deterministic seedable RNG stack: SplitMix64 (seeding), xoshiro256** (state evolution), FNV-1a (genetic hashing), Box-Muller (Gaussian).",
+      "dependencies": [
+        "GSPL-INV-0004"
+      ],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "spec/03-kernel.md",
+          "repo": "paradigm-reference"
+        },
+        {
+          "file": "src/rng/deterministic.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "founderIntent": "GSPL reproducibility requires every random decision to flow through a deterministic seedable RNG. The canon-foundation implementation uses SplitMix64 seeding, xoshiro256** state evolution, FNV-1a hashing, and Box-Muller Gaussian sampling.",
+      "id": "GSPL-INV-0003",
+      "implementationStatus": "complete",
+      "problemSolved": "Different OS, libm, or wall-clock must produce identical random outputs.",
+      "risks": [
+        "Migration to a different PRNG family would break reproducibility of in-flight gseeds."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "kernel"
+    },
+    {
+      "aliases": [
+        "SHA-256",
+        "FIPS 180-4"
+      ],
+      "canonicalName": "SHA-256 content addressing",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0001",
+      "definition": "The SHA-256 cryptographic hash function as defined in FIPS 180-4.",
+      "dependencies": [],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "spec/05-sovereignty.md",
+          "repo": "paradigm-reference"
+        },
+        {
+          "file": "src/hash/sha256.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "founderIntent": "All content identifiers in GSPL sovereignty are SHA-256 of the JCS-canonical encoding of the object. The implementation is pure JS with NIST FIPS 180-4 test vectors pinned.",
+      "id": "GSPL-INV-0004",
+      "implementationStatus": "complete",
+      "problemSolved": "GSPL sovereignty requires a globally stable, collision-resistant content identifier.",
+      "risks": [
+        "Quantum attacks on SHA-256 are not a near-term threat but are noted (ADR-0001)."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "kernel"
+    },
+    {
+      "aliases": [
+        "JCS",
+        "RFC 8785",
+        "canonical JSON"
+      ],
+      "canonicalName": "JCS RFC 8785 canonicalization",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0001",
+      "definition": "RFC 8785 JSON Canonicalization Scheme.",
+      "dependencies": [],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "spec/05-sovereignty.md",
+          "repo": "paradigm-reference"
+        },
+        {
+          "file": "src/canonicalize/jcs.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "founderIntent": "JSON Canonicalization Scheme (RFC 8785) is the substrate of GSPL content identity. The implementation follows the spec exactly with shortest-roundtrip number formatting, lex-sorted object keys, and UTF-16 surrogate pairs preserved.",
+      "id": "GSPL-INV-0005",
+      "implementationStatus": "complete",
+      "problemSolved": "Two equivalent JSON documents must hash to the same SHA-256 to be canonically equivalent.",
+      "risks": [
+        "Library drift if a third-party JCS implementation differs from RFC 8785 in edge cases."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "kernel"
+    },
+    {
+      "aliases": [
+        "d-lineage",
+        "lineage tracking"
+      ],
+      "canonicalName": "Lineage block",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0001",
+      "definition": "The $lineage field of a Genome: operation, parents, generation, optional timestamp.",
+      "dependencies": [
+        "GSPL-INV-0005"
+      ],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "spec/01-universal-seed.md",
+          "repo": "paradigm-reference"
+        },
+        {
+          "file": "src/types/universal-seed.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "founderIntent": "Every GSPL seed carries a $lineage block recording the operation that produced it, the parent gseeds, and the generation number. The lineage timestamp is deliberately normalized out of canonical hashes because timestamps would break reproducibility.",
+      "id": "GSPL-INV-0006",
+      "implementationStatus": "complete",
+      "problemSolved": "Reconstructing the history of a seed requires every gseed to know how it was produced.",
+      "risks": [
+        "External tooling often mutates without writing a new $lineage."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "kernel"
+    },
+    {
+      "aliases": [
+        "validate/mutate/crossover/distance/canonicalize"
+      ],
+      "canonicalName": "Per-gene-type 5-operator suite",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0004",
+      "definition": "Per-gene-type operator suite: validate, mutate, crossover, distance, canonicalize.",
+      "dependencies": [
+        "GSPL-INV-0002",
+        "GSPL-INV-0003"
+      ],
+      "disposition": "ADAPT",
+      "evidence": [
+        {
+          "file": "spec/02-gene-system.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "founderIntent": "Each gene type carries the same five canonical operators, satisfying the per-type property tests in spec/02. The 5-operator convention makes genetic composition closed under the inventory.",
+      "id": "GSPL-INV-0007",
+      "implementationStatus": "partial",
+      "problemSolved": "Genetic operations should compose uniformly without per-type special cases.",
+      "risks": [
+        "Per-type operators that do not satisfy the per-type property tests are flagged by ADR-0004."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "gene-system"
+    },
+    {
+      "aliases": [
+        "26 keywords",
+        "reserved words"
+      ],
+      "canonicalName": "26-keyword reserved language grammar",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0004",
+      "definition": "Initial inventory of 26 reserved GSPL keywords: seed, breed, mutate, compose, evolve, grow, export, import, let, fn, if, else, match, for, while, return, true, false, null, type, trait, impl, where, gene, domain, signed.",
+      "dependencies": [
+        "GSPL-INV-0001"
+      ],
+      "disposition": "ADAPT",
+      "evidence": [
+        {
+          "file": "spec/04-gspl-language.md",
+          "repo": "paradigm-reference"
+        },
+        {
+          "file": "src/constants.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "founderIntent": "The Initial Inventory of 26 reserved GSPL keywords. Additions are conservative because keywords change source-code meaning. EXTENSIBLE per the EXTENSIBILITY PROTOCOL.",
+      "id": "GSPL-INV-0008",
+      "implementationStatus": "partial",
+      "problemSolved": "A core language needs a stable, finite, parsimonious reserved-word set.",
+      "risks": [
+        "Adding keywords can silently break existing source code."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "language"
+    },
+    {
+      "aliases": [
+        "GSPL parser"
+      ],
+      "canonicalName": "Recursive-descent GSPL parser",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0005",
+      "definition": "Recursive-descent parser producing the typed AST as defined in spec/04.",
+      "dependencies": [
+        "GSPL-INV-0008"
+      ],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "spec/04-gspl-language.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "founderIntent": "A recursive-descent parser over a 25+ node typed AST, layered atop the 26-keyword grammar. The parser is partial in canon-foundation; full coverage requires the canonical IR (deferred to Prompt 2).",
+      "id": "GSPL-INV-0009",
+      "implementationStatus": "partial",
+      "problemSolved": "A canonical parser makes source code reproducible across implementations.",
+      "risks": [
+        "Edge cases (operator precedence, generics) are not fully exercised in canon-foundation tests."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "language"
+    },
+    {
+      "aliases": [
+        "GSPL AST"
+      ],
+      "canonicalName": "Typed AST (25+ nodes)",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0005",
+      "definition": "Typed Abstract Syntax Tree with at least 25 node kinds as defined in spec/04.",
+      "dependencies": [
+        "GSPL-INV-0009"
+      ],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "spec/04-gspl-language.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "founderIntent": "A typed AST with at least 25 node kinds forms the substrate of language interpretation and codegen.",
+      "id": "GSPL-INV-0010",
+      "implementationStatus": "partial",
+      "problemSolved": "A typed intermediate shape enables both interpretation and codegen, with type-aware diagnostics.",
+      "risks": [
+        "AST drift between interpreters and codegen produces non-deterministic outputs."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "compiler"
+    },
+    {
+      "aliases": [
+        "GSPL interpreter"
+      ],
+      "canonicalName": "AST interpreter",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0006",
+      "definition": "Tree-walking interpreter over the typed AST.",
+      "dependencies": [
+        "GSPL-INV-0010"
+      ],
+      "disposition": "ADAPT",
+      "evidence": [
+        {
+          "file": "spec/04-gspl-language.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "founderIntent": "An AST interpreter executes a GSPL program by walking the AST and applying environment-scoped substitutions.",
+      "id": "GSPL-INV-0011",
+      "implementationStatus": "partial",
+      "problemSolved": "Reference execution semantics without committing to a particular compilation target.",
+      "risks": [
+        "Interpreter and codegen may disagree on edge cases until a canonical semantics document exists."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "runtime"
+    },
+    {
+      "aliases": [
+        "codegen",
+        "GSPL to JS"
+      ],
+      "canonicalName": "AST to JavaScript compiler (codegen)",
+      "claimStatus": null,
+      "conflicts": [
+        "GSPL-INV-0013"
+      ],
+      "createdAtPolicy": "ADR-0008",
+      "definition": "AST to ES2020 codegen pipeline emitting JavaScript modules.",
+      "dependencies": [
+        "GSPL-INV-0010"
+      ],
+      "disposition": "ADAPT",
+      "evidence": [
+        {
+          "file": "spec/04-gspl-language.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "founderIntent": "A codegen pipeline that lowers a typed AST to ES2020 JavaScript for cross-language projection. Currently uses the typed AST as the de-facto IR.",
+      "id": "GSPL-INV-0012",
+      "implementationStatus": "partial",
+      "problemSolved": "Cross-language projection of GSPL programs to standard JavaScript runtimes.",
+      "risks": [
+        "If a canonical IR is adopted, codegen must be retrofitted to consume it."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "compiler"
+    },
+    {
+      "aliases": [
+        "GSPL-IR"
+      ],
+      "canonicalName": "Canonical GSPL IR (research)",
+      "claimStatus": null,
+      "conflicts": [
+        "GSPL-INV-0012"
+      ],
+      "createdAtPolicy": "ADR-0008",
+      "definition": "A canonical GSPL IR is RESEARCH-REQUIRED; the references propose different IRs and no canonical choice is locked yet.",
+      "dependencies": [
+        "GSPL-INV-0010"
+      ],
+      "disposition": "RESEARCH",
+      "evidence": [
+        {
+          "file": "src/runtime/cli.ts",
+          "repo": "paradigm-gspl-os"
+        },
+        {
+          "file": "spec/04-gspl-language.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "founderIntent": "A canonical GSPL IR is researched but not adopted. The referenced allocations across paradigms vary. ADR-0008 records this as research-only until Prompt 2 finalizes a canonical IR shape.",
+      "id": "GSPL-INV-0013",
+      "implementationStatus": "spec-only",
+      "problemSolved": "Codegen, optimizer, and debugger would benefit from a unified IR.",
+      "risks": [
+        "Without a canonical IR, codegen and interpreter drift; paradigms diverge."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "compiler"
+    },
+    {
+      "aliases": [
+        "tick cycle",
+        "runtime tick"
+      ],
+      "canonicalName": "8-phase runtime tick cycle",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0006",
+      "definition": "8-phase tick cycle: intake, classify, bind, project, persist, validate, complete, idle.",
+      "dependencies": [
+        "GSPL-INV-0001"
+      ],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "spec/03-kernel.md",
+          "repo": "paradigm-reference"
+        },
+        {
+          "file": "src/tick/cycle.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "founderIntent": "The runtime ticks through eight ordered phases: intake, classify, bind, project, persist, validate, complete, idle. Each tick is deterministic given the seed and current knowledge version.",
+      "id": "GSPL-INV-0014",
+      "implementationStatus": "partial",
+      "problemSolved": "Runtime phases must be deterministic and reproducible across hosts.",
+      "risks": [
+        "Adding phases would require a major version bump to the runtime contract."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "runtime"
+    },
+    {
+      "aliases": [
+        "effects",
+        "effect system"
+      ],
+      "canonicalName": "8 algebraic-effect system (research)",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0006",
+      "definition": "Eight algebraic effects: spawn, transform, observe, compose, dispose, audit, sign, broadcast. Algebraic semantics are RESEARCH.",
+      "dependencies": [
+        "GSPL-INV-0014"
+      ],
+      "disposition": "RESEARCH",
+      "evidence": [
+        {
+          "file": "spec/03-kernel.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "founderIntent": "Eight algebraic effects are planned: spawn, transform, observe, compose, dispose, audit, sign, broadcast. The cycle framework stubs each effect but the algebraic semantics remain research-only.",
+      "id": "GSPL-INV-0015",
+      "implementationStatus": "spec-only",
+      "problemSolved": "Programs need a stable, composable vocabulary for runtime side-effects without arbitrary I/O.",
+      "risks": [
+        "Algebraic semantics not yet pinned; effect-channel drift is possible."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "runtime"
+    },
+    {
+      "aliases": [
+        "GSED",
+        "gseed format",
+        "gseed container"
+      ],
+      "canonicalName": ".gseed binary container format",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0006",
+      "definition": "Binary container for shipping and storing a Genome on disk.",
+      "dependencies": [
+        "GSPL-INV-0001",
+        "GSPL-INV-0004"
+      ],
+      "disposition": "ADAPT",
+      "evidence": [
+        {
+          "file": "spec/06-gseed-format.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "founderIntent": "A gseed file begins with the four-byte magic GSED, followed by a header that records content hash, schema version, and lineage. The format is content-addressed: two gseeds with the same content body and lineage are byte-identical.",
+      "id": "GSPL-INV-0016",
+      "implementationStatus": "partial",
+      "problemSolved": "A reproducible container format lets gseeds be checkpointed, shared, and reproduced byte-for-byte.",
+      "risks": [
+        "Adding fields without bumping $gst version silently invalidates downstream readers."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "package-system"
+    },
+    {
+      "aliases": [
+        "sovereignty",
+        "signing key"
+      ],
+      "canonicalName": "ECDSA P-256 + RFC 6979 sovereignty",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0001",
+      "definition": "ECDSA P-256 signatures with deterministic RFC 6979 nonces over the SHA-256 content root of a gseed lineage.",
+      "dependencies": [
+        "GSPL-INV-0004",
+        "GSPL-INV-0005"
+      ],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "spec/05-sovereignty.md",
+          "repo": "paradigm-reference"
+        }
+      ],
+      "founderIntent": "Sovereignty is established by an ECDSA P-256 keypair whose verified signatures cover gseed lineage and a SHA-256 content root. Signatures are deterministic per RFC 6979 so different signatories produce identical signatures over the same input.",
+      "id": "GSPL-INV-0017",
+      "implementationStatus": "partial",
+      "problemSolved": "Programs must attest authorship and lineage integrity across hosts, in a universally portable key format.",
+      "risks": [
+        "Non-deterministic nonces break reproducibility. ADHOC crypto is forbidden by ADR-0001."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "canon-governance"
+    },
+    {
+      "aliases": [
+        "SEVEN_AXES",
+        "7-axis discipline"
+      ],
+      "canonicalName": "Seven-axis structural contract",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0006",
+      "definition": "Seven structural axes: signed, typed, lineage-tracked, graph-structured, confidence-bearing, rollback-able, differentiable.",
+      "dependencies": [
+        "GSPL-INV-0017"
+      ],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "src/constants.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "founderIntent": "Seven structural axes that every GSPL surface satisfies: signed, typed, lineage-tracked, graph-structured, confidence-bearing, rollback-able, differentiable. Dropping any axis breaks the Next-Axis claim of the substrate.",
+      "id": "GSPL-INV-0018",
+      "implementationStatus": "partial",
+      "problemSolved": "Without a structural contract, every GSPL output shape drifts; surfaces diverge.",
+      "risks": [
+        "Adding an axis would be a major canon change."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "canon-governance"
+    },
+    {
+      "aliases": [
+        "cli",
+        "gspl CLI"
+      ],
+      "canonicalName": "GSPL CLI surface",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0009",
+      "definition": "Canonical CLI surface (validate, hash, seed, expand, sign, verify) for sovereign GSPL operations.",
+      "dependencies": [
+        "GSPL-INV-0001",
+        "GSPL-INV-0004",
+        "GSPL-INV-0017"
+      ],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "src/runtime/cli.ts",
+          "repo": "paradigm-gspl-os"
+        }
+      ],
+      "founderIntent": "A canonical GSPL CLI with subcommands: gspl validate, gspl hash, gspl seed, gspl expand, gspl sign, gspl verify. The surface is adapted from paradigm-gspl-os and governed by ADR-0009.",
+      "id": "GSPL-INV-0019",
+      "implementationStatus": "partial",
+      "problemSolved": "A canonical CLI surface prevents tooling drift and undocumented command behavior.",
+      "risks": [
+        "Adding CLI subcommands without an ADR would lock users into unstable command shapes."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "package-system"
+    },
+    {
+      "aliases": [
+        "canon tests",
+        "vitest suite"
+      ],
+      "canonicalName": "Vitest-based canon test framework",
+      "claimStatus": null,
+      "conflicts": [],
+      "createdAtPolicy": "ADR-0009",
+      "definition": "Vitest configuration and conventions for canonical testing.",
+      "dependencies": [
+        "GSPL-INV-0001"
+      ],
+      "disposition": "ADOPT",
+      "evidence": [
+        {
+          "file": "vitest.config.ts",
+          "repo": "paradigm-gspl-os"
+        },
+        {
+          "file": "vitest.config.ts",
+          "repo": "canon-foundation"
+        }
+      ],
+      "founderIntent": "All canon-related tests use Vitest and live in test/ directories inside each package. The framework hosts per-package property tests and the cross-package consistency tests.",
+      "id": "GSPL-INV-0020",
+      "implementationStatus": "complete",
+      "problemSolved": "A consistent test framework is required to host per-package test suites and the cross-package consistency tests.",
+      "risks": [
+        "Test framework drift would invalidate the consistency tests that tie registry to ledgers."
+      ],
+      "schemaVersion": "1.0",
+      "targetSubsystem": "canon-governance"
+    }
+  ],
+  "schema": "gspl.invention-ledger",
+  "schemaVersion": "1.0"
+}

@@ -1,0 +1,1 @@
+{"dependencies":{"contextRefs":[],"knowledgeRefs":[],"ruleSetRefs":[],"targetContracts":[{"requiredCapabilities":["emit-audio","emit-interactive","emit-video"],"targetId":"mixed-artifact-output","targetType":"composite"}]},"schema":"gspl.package-lock","schemaVersion":"1.0"}

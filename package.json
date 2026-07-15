@@ -24,7 +24,7 @@
     "index:references": "node tools/reference-indexer/dist/bin.js --config reference-manifest/repos.config.json --output reference-manifest/source-manifest.json",
     "check:provenance": "node tools/provenance-checker/dist/bin.js --inventions canon/provenance/inventions.json --decisions docs/audit/architecture-decisions.json --sources canon/provenance/sources.json --report canon/provenance/validation-report.json",
 
-    "validate": "npm run typecheck && npm run build && npm test && npm run check:roundtrip && npm run check:packages && npm run check:clean-source && npm run check:clean-bin",
+    "validate": "npm run typecheck:all && npm run build && npm test && npm run test:property && npm run test:fuzz:ci && npm run test:mutation:ci && npm run test:archive-adversarial && npm run fixtures:generate && npm run check:roundtrip && npm run check:restart-reconstruction && npm run check:packages && npm run check:determinism && npm run check:conformance && npm run check:tracked-source && npm run check:clean-source && npm run package:source && npm run check:source-archive && npm run check:archive-reproducibility && npm run write:canonical-manifest",
 
     "canon:bootstrap": "node tools/canon-bootstrap/dist/bin.js --write-and-validate --repo-root .",
     "canon:check": "node tools/canon-bootstrap/dist/bin.js --validate --repo-root .",
@@ -54,7 +54,11 @@
     "check:restart-reconstruction": "node --experimental-strip-types scripts/restart-reconstruction.mts",
     "check:conformance": "vitest run packages/compiler-core/test/canonicalization.test.ts",
 
-    "typecheck:all": "tsc --noEmit -p ."
+    "typecheck:all": "tsc --noEmit -p .",
+
+    "check:archive-reproducibility": "node --experimental-strip-types scripts/check-archive-reproducibility.mts",
+    "check:tracked-source": "node --experimental-strip-types scripts/check-tracked-source.mts",
+    "test:archive-adversarial": "vitest run scripts/source-package.test/archive-adversarial.test.ts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

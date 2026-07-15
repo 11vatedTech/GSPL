@@ -21,38 +21,52 @@ jobs:
       - run: npm run test:property
       - run: npm run test:fuzz:ci
       - run: npm run test:mutation:ci
+      - run: npm run test:archive-adversarial
       - run: npm run fixtures:generate
       - run: npm run check:roundtrip
       - run: npm run check:restart-reconstruction
       - run: npm run check:packages
       - run: npm run check:determinism
       - run: npm run check:conformance
+      - run: npm run check:tracked-source
       - run: npm run check:clean-source
-      - run: npm run validate
       - run: npm run package:source
       - run: npm run check:source-archive
-      - name: Upload canonical hash manifest
-        if: always()
+      - run: npm run check:archive-reproducibility
+      - name: Write canonical-output manifest for this matrix identity
+        env:
+          RUN_ID: ${{ matrix.os }}-node${{ matrix.node }}
+        run: npm run write:canonical-manifest
+      - name: Upload canonical comparison files
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: gspl-canonical-${{ matrix.os }}-node${{ matrix.node }}
-          path: artifacts/validation/
+          path: |
+            artifacts/validation/canonical-output-manifest-${{ matrix.os }}-node${{ matrix.node }}.json
+            artifacts/validation/canonical-output-manifest-${{ matrix.os }}-node${{ matrix.node }}.json.sha256
+            build/gspl-canon-source.tar.gz
+            build/gspl-canon-source.tar.gz.sha256
+            build/gspl-canon-source-manifest.json
+            build/gspl-canon-source-manifest.json.sha256
 
   hash-compare:
     needs: build
     runs-on: ubuntu-latest
-    if: always()
+    if: needs.build.result == 'success'
     steps:
       - uses: actions/checkout@v4
-      - name: Download all canonical hash manifests
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Download all four canonical artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts/validation/
-      - name: Fail if canonical hashes differ across matrix
+          path: artifacts/validation-matrix/
+      - name: Compare canonical-output manifests
         run: |
-          if [ "$(find artifacts/validation -name '*.json' -exec sha256sum {} \; 2>/dev/null | awk '{print $1}' | sort -u | wc -l)" -gt 1 ]; then
-            echo "::error::canonical hash manifest differs across OS/Node combinations";
-            exit 1;
-          else
-            echo "canonical hash manifest is identical across all matrix jobs";
-          fi
+          mkdir -p artifacts/validation
+          for d in artifacts/validation-matrix/gspl-canonical-*/; do
+            cp "$d"/* artifacts/validation/
+          done
+          npm run compare:canonical-manifests

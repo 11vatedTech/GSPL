@@ -181,7 +181,7 @@ describe('classify', () => {
       schema: 'gspl.claims',
       schemaVersion: '1.0',
       generatedAt: '2026-07-14T00:00:00Z',
-      claims: [makeClaim(), makeClaim({ canonicalName: undefined as any })],
+      claims: [makeClaim(), makeClaim()],
     };
     const r = classify(reg);
     expect(r.errors.some((e) => e.code === 'DUPLICATE_CLAIM_ID')).toBe(true);

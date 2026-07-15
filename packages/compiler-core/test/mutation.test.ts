@@ -10,19 +10,19 @@ describe("Mutation Sensitivity",function(){
     var s=makePrimordialSeed({payload:{schemaVersion:"1.0",genes:{x:{type:"symbolic",value:"test"}}}});
     var r=runPipeline(ctx,s);
     expect(r.session.ir).toBeDefined();
-    expect(r.session.ir.nodes.size).toBeGreaterThan(0);
+    expect(r.session.ir!.nodes.size).toBeGreaterThan(0);
   });
   it("detects: planner returns nonzero operations",function(){
     var ctx=createCompilerContext();
     var s=makePrimordialSeed({payload:{schemaVersion:"1.0",genes:{x:{type:"symbolic",value:"test"}}}});
     var r=runPipeline(ctx,s);
-    expect(r.session.plan.operations.length).toBeGreaterThan(0);
+    expect(r.session.plan!.operations.length).toBeGreaterThan(0);
   });
   it("detects: artifact generator returns nonzero artifacts",function(){
     var ctx=createCompilerContext();
     var s=makePrimordialSeed({payload:{schemaVersion:"1.0",genes:{x:{type:"symbolic",value:"test"}}}});
     var r=runPipeline(ctx,s);
-    expect(r.session.artifactGraph.artifacts.length).toBeGreaterThan(0);
+    expect(r.session.artifactGraph!.artifacts.length).toBeGreaterThan(0);
   });
   it("detects: hash changes when semantic field changes",function(){
     var s1=makePrimordialSeed({intent:{purpose:"p1"}});
@@ -64,7 +64,7 @@ describe("Mutation Sensitivity",function(){
     var r=runPipeline(ctx,s);
     var ir=r.session.ir;
     expect(ir).toBeDefined();
-    expect(ir.metadata.generatedAt).toBeUndefined();
+    expect(ir!.metadata.generatedAt).toBeUndefined();
     expect(function(){return Date.now()}).toBeDefined();
   });
 });

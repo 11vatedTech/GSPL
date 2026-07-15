@@ -6,7 +6,7 @@ import { runPipeline, createCompilerContext } from "../src/pipeline.js";
 import { verifyIndependentReconstruction, reconstructSeedFromIr } from "../src/ir-reconstructor.js";
 import { fixtureSoftwareArchitecture, fixtureInteractiveScene, fixtureMixedVideoGame } from "../src/fixtures.js";
 
-function bytesEqual(a, b) {
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;
   for (var i = 0; i < a.length; i++) { if (a[i] !== b[i]) return false; }
   return true;
@@ -22,7 +22,7 @@ describe("Canonicalization Order Independence", function() {
   });
 
   it("produces identical canonical bytes regardless of gene declaration order", function() {
-    function make(genes) {
+    function make(genes: Record<string, { type: string; value: unknown }>) {
       return makePrimordialSeed({ payload: { schemaVersion: "1.0", genes: genes } });
     }
     var s1 = make({ b: { type: "symbolic", value: "B" }, a: { type: "symbolic", value: "A" } });
@@ -61,21 +61,21 @@ describe("Seed to IR to Seed Round Trip", function() {
       var ctx = createCompilerContext();
       var result = runPipeline(ctx, f.seed);
       expect(result.session.ir).toBeDefined();
-      expect(result.session.ir.nodes.size).toBeGreaterThan(0);
+      expect(result.session.ir!.nodes.size).toBeGreaterThan(0);
     });
 
     it(f.name + ": produces non-empty plan", function() {
       var ctx = createCompilerContext();
       var result = runPipeline(ctx, f.seed);
       expect(result.session.plan).toBeDefined();
-      expect(result.session.plan.operations.length).toBeGreaterThan(0);
+      expect(result.session.plan!.operations.length).toBeGreaterThan(0);
     });
 
     it(f.name + ": produces non-empty artifacts", function() {
       var ctx = createCompilerContext();
       var result = runPipeline(ctx, f.seed);
       expect(result.session.artifactGraph).toBeDefined();
-      expect(result.session.artifactGraph.artifacts.length).toBeGreaterThan(0);
+      expect(result.session.artifactGraph!.artifacts.length).toBeGreaterThan(0);
     });
 
     it(f.name + ": roundtrip preserves canonical bytes", function() {
@@ -84,8 +84,6 @@ describe("Seed to IR to Seed Round Trip", function() {
       var normalized = result.session.normalizedSeed || f.seed;
       var ir = result.session.ir;
       var originalBytes = canonicalizeSeed(normalized);
-      // §5: reconstruction-context geneRegistry comes from the SAME compiler context that
-      // produced the IR (closure variable `ctx`), not from an undefined identifier.
       var reconCtx = {
         schemaRegistry: {},
         geneRegistry: ctx.geneRegistry,

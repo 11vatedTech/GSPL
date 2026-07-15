@@ -137,12 +137,12 @@ export function createStandardGeneRegistry(): GeneTypeRegistry {
   // typed-as-readonly facade. We provide closure-backed operations as the only
   // canonical mutation channel — there is no public `.register()`.
   const typesReadOnly: ReadonlyMap<string, GeneTypeDescriptor> = Object.freeze({
-    has: (k) => m.has(k),
-    get: (k) => m.get(k),
+    has: (k: string) => m.has(k),
+    get: (k: string) => m.get(k),
     entries: () => m.entries(),
     keys: () => m.keys(),
     values: () => m.values(),
-    forEach: (cb, thisArg) => m.forEach(cb, thisArg),
+    forEach: (cb: (value: GeneTypeDescriptor, key: string, map: Map<string, GeneTypeDescriptor>) => void, thisArg?: unknown) => m.forEach(cb, thisArg),
     get size() { return m.size; },
     [Symbol.iterator]: () => m[Symbol.iterator](),
   }) as ReadonlyMap<string, GeneTypeDescriptor>;

@@ -4,7 +4,7 @@ import { makePrimordialSeed, canonicalizeSeed, computeSeedHash } from "@gspl/see
 import { runPipeline, createCompilerContext } from "../src/pipeline.js";
 import { fixtureSoftwareArchitecture, fixtureInteractiveScene, fixtureMixedVideoGame } from "../src/fixtures.js";
 
-function bytesEqual(a,b){if(a.length!==b.length)return false;for(var i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true;}
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean{if(a.length!==b.length)return false;for(var i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true;}
 
 describe("Cross-Process Determinism",function(){
   it("same seed produces identical canonical output across runs",function(){
@@ -26,11 +26,11 @@ describe("Cross-Process Determinism",function(){
       var label = fixtureNames[i];
       var r=runPipeline(createCompilerContext(),seed);
       expect(r.session.ir, label + " IR").toBeDefined();
-      expect(r.session.ir.nodes.size, label + " IR nodes").toBeGreaterThan(0);
+      expect(r.session.ir!.nodes.size, label + " IR nodes").toBeGreaterThan(0);
       expect(r.session.plan, label + " plan").toBeDefined();
-      expect(r.session.plan.operations.length, label + " ops").toBeGreaterThan(0);
+      expect(r.session.plan!.operations.length, label + " ops").toBeGreaterThan(0);
       expect(r.session.artifactGraph, label + " artifacts").toBeDefined();
-      expect(r.session.artifactGraph.artifacts.length, label + " artifacts count").toBeGreaterThan(0);
+      expect(r.session.artifactGraph!.artifacts.length, label + " artifacts count").toBeGreaterThan(0);
     }
   });
 

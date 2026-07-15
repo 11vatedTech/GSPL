@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import { makePrimordialSeed, canonicalizeSeed, normalizeSeed, computeSeedHash } from "@gspl/seed-format";
 import { createIrGraph, addNode, normalizeGraph, computeGraphHash } from "@gspl/ir-model";
 
-function bytesEqual(a,b){if(a.length!==b.length)return false;for(var i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true;}
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {if(a.length!==b.length)return false;for(var i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true;}
 
 describe("Canonicalization Laws",function(){
   it("normalize(normalize(x)) = normalize(x)",function(){

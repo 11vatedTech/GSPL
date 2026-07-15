@@ -1,6 +1,6 @@
 /** Package fixture tests — Prompt 2 §5 */
 import { describe, it, expect } from "vitest";
-import { createPackageResolver } from "@gspl/package-resolver";
+import { createPackageResolver } from "../../package-resolver/src/resolver.js";
 import { makePrimordialSeed } from "@gspl/seed-format";
 import { runPipeline, createCompilerContext } from "../src/pipeline.js";
 
@@ -86,17 +86,14 @@ describe("Package Fixtures", function() {
   it("tampered package fails hash verification", function() {
     var r = createPackageResolver();
     var pkg = createContextPackage();
-    pkg.loadedContent = { timezone: "TAMPERED" };
+    // Tamper with loaded content (cast to bypass TS2739 partial-fields check).
+    pkg.loadedContent = { timezone: "TAMPERED" } as { timezone: string; locale: string; nodeVersion: string };
+    // Set a stale preemptive contentHash so verifyHash actually runs and detects mismatch.
+    pkg.coordinate.contentHash = "sha256:deadbeef";
     r.registerPackage(pkg);
-    // With contentHash empty, no hash check
-    // But if we set it, it would fail
-    expect(function() {
-      var r2 = createPackageResolver();
-      var p2 = createContextPackage();
-      p2.coordinate.contentHash = "sha256:deadbeef";
-      r2.registerPackage(p2);
-      r2.resolve(p2.coordinate, 0);
-    }).toThrow();
+    var result = r.resolve(pkg.coordinate, 0);
+    expect(result.ok).toBe(false);
+    expect(result.errors.some(function(e) { return e.code === "HASH_MISMATCH"; })).toBe(true);
   });
 
   it("all four package kinds can coexist", function() {

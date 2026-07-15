@@ -207,12 +207,13 @@ describe('validator — 8 invariants per spec/01', () => {
     if (!r.ok) {
       expect(r.errors.some((e) => e.invariant === 6)).toBe(true);
     }
-  });
-
-  it('rejects unknown gene type (invariant 4)', () => {
-    const seed = makePrimordialDraft('character', {
-      size: { type: 'unknown_type', value: 1 },
-    });
+  });  it('rejects unknown gene type (invariant 4)', () => {
+    const seed = makePrimordialDraft(
+      'character',
+      {
+        size: { type: 'unknown_type' as any, value: 1 },
+      }
+    );
     const r = validateSeed(seed);
     expect(r.ok).toBe(false);
     if (!r.ok) {
@@ -358,6 +359,7 @@ describe('tick cycle scaffolding', () => {
     expect(ok.status).toBe('completed');
     const failed = failTick(tick, 'validate', 'BAD_HASH', 'seed hash mismatch');
     expect(failed.status).toBe('failed');
-    expect(failed.error.phase).toBe('validate');
+    expect(failed.error).toBeDefined();
+    expect(failed.error!.phase).toBe('validate');
   });
 });

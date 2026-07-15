@@ -35,8 +35,9 @@ describe("Performance Benchmarks",function(){
     var r=runPipeline(ctx,small);
     var ir=r.session.ir;
     if(ir){
+      var captured=ir;
       var ms=measureMs(function(){
-        normalizeGraph(ir);
+        normalizeGraph(captured);
       });
       expect(ms).toBeLessThan(200);
     }
@@ -46,7 +47,8 @@ describe("Performance Benchmarks",function(){
     var r=runPipeline(ctx,small);
     var ir=r.session.ir;
     if(ir){
-      var ms=measureMs(function(){reconstructSeedFromIr(ir,rCtx)});
+      var captured=ir;
+      var ms=measureMs(function(){reconstructSeedFromIr(captured,rCtx)});
       expect(ms).toBeLessThan(200);
     }
   });

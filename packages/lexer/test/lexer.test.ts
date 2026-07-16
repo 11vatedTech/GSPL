@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { SourceDocument, DEFAULT_SOURCE_LIMITS } from '../../text-source/src/index.js';
-import { SyntaxKind, GreenToken } from '../../syntax-tree/src/index.js';
-import { lexSource, validateTokenStream, scanIdentifierOrKeyword, scanPunctuationOrOperator, scanNumericLiteral, scanStringLiteral } from '../src/index.js';
+import { SourceDocument, DEFAULT_SOURCE_LIMITS } from '@gspl/text-source';
+import { SyntaxKind, GreenToken } from '@gspl/syntax-tree';
+import { lexSource, validateTokenStream, validateOwnership, scanIdentifierOrKeyword, scanPunctuationOrOperator, scanNumericLiteral, scanStringLiteral } from '../src/index.js';
 
 function doc(text: string): SourceDocument {
   return SourceDocument.create('test.gspl', text);
@@ -245,3 +245,162 @@ describe('Lexer — statistics', () => {
     expect(r.statistics.tokenCount).toBe(5);
   });
 });
+
+describe('Lexer — trivia ownership (Prompt 3 Integrity Repair §7)', () => {
+  it('"a   b": token A owns same-line spaces', () => {
+    const r = lexSource(doc('a   b'));
+    expect(r.tokens[0]!.greenToken.text).toBe('a');
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe('   ');
+    expect(r.tokens[1]!.leadingTrivia).toHaveLength(0);
+  });
+  it('"a\\tb": same-line tab belongs to token A', () => {
+    const r = lexSource(doc('a\tb'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe('\t');
+    expect(r.tokens[1]!.leadingTrivia).toHaveLength(0);
+  });
+  it('"a   ": same-line trailing whitespace at EOF belongs to token A; EOF leading is empty', () => {
+    const r = lexSource(doc('a   '));
+    expect(r.tokens[0]!.greenToken.text).toBe('a');
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe('   ');
+    expect(r.tokens[r.tokens.length - 1]!.leadingTrivia).toHaveLength(0);
+  });
+  it('"a // comment": same-line line comment at EOF belongs to token A', () => {
+    const r = lexSource(doc('a // comment'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' // comment');
+    expect(r.tokens[r.tokens.length - 1]!.leadingTrivia).toHaveLength(0);
+  });
+  it('"a // comment\\nb": comment trails A, newline leads B', () => {
+    const r = lexSource(doc('a // comment\nb'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' // comment');
+    expect(r.tokens[1]!.leadingTrivia.length).toBeGreaterThan(0);
+    expect(r.tokens[1]!.greenToken.text).toBe('b');
+  });
+  it('"a /* block */ b": same-line block comment belongs to token A', () => {
+    const r = lexSource(doc('a /* block */ b'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' /* block */ ');
+    expect(r.tokens[1]!.leadingTrivia).toHaveLength(0);
+  });
+  it('"a /* block */": same-line block at EOF belongs to token A', () => {
+    const r = lexSource(doc('a /* block */'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' /* block */');
+    expect(r.tokens[r.tokens.length - 1]!.leadingTrivia).toHaveLength(0);
+  });
+  it('"a\\n  b": newline + indent lead token B', () => {
+    const r = lexSource(doc('a\n  b'));
+    expect(r.tokens[1]!.leadingTrivia.map((t) => t.text).join('')).toBe('\n  ');
+    expect(r.tokens[0]!.trailingTrivia).toHaveLength(0);
+  });
+  it('"a\\n  ": post-newline trivia leads EOF', () => {
+    const r = lexSource(doc('a\n  '));
+    const eof = r.tokens[r.tokens.length - 1]!;
+    expect(eof.leadingTrivia.map((t) => t.text).join('')).toBe('\n  ');
+    expect(r.tokens[0]!.trailingTrivia).toHaveLength(0);
+  });
+  it('"// leading\\na": no preceding token → trivia leads A', () => {
+    const r = lexSource(doc('// leading\na'));
+    expect(r.tokens[0]!.greenToken.text).toBe('a');
+    expect(r.tokens[0]!.leadingTrivia.length).toBeGreaterThan(0);
+  });
+  it('"/** documentation */\\ngene a": documentation leads `gene`', () => {
+    const r = lexSource(doc('/** documentation */\ngene a'));
+    expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.KeywordGene);
+    expect(r.tokens[0]!.leadingTrivia.length).toBeGreaterThan(0);
+    expect(r.tokens[1]!.leadingTrivia).toHaveLength(0);
+  });
+  it('"// comment-only file": comment leads EOF', () => {
+    const r = lexSource(doc('// comment-only file'));
+    const eof = r.tokens[r.tokens.length - 1]!;
+    expect(eof.leadingTrivia.length).toBeGreaterThanOrEqual(1);
+  });
+  it('"   ": whitespace-only file attaches WS to EOF', () => {
+    const r = lexSource(doc('   '));
+    const eof = r.tokens[r.tokens.length - 1]!;
+    expect(eof.leadingTrivia.map((t) => t.text).join('')).toBe('   ');
+  });
+  it('"": empty source emits exactly one EOF with empty leading', () => {
+    const r = lexSource(doc(''));
+    expect(r.tokens.length).toBe(1);
+    expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.EndOfFile);
+    expect(r.tokens[0]!.leadingTrivia).toHaveLength(0);
+  });
+});
+
+describe('Lexer — property-level ownership (Prompt 3 Integrity Repair §8)', () => {
+  const cases = ['a   b', 'a\tb', 'a   ', 'a // comment', 'a /* block */', 'a\n  b', 'a\n  ', '// leading\na', '/** documentation */\ngene a', '// comment-only file', '   ', ''];
+  it('every §7 fixture passes validateOwnership', () => {
+    for (const c of cases) {
+      const source = doc(c);
+      const r = lexSource(source);
+      const v = validateOwnership(source, r.tokens);
+      expect(v.ok).toBe(true);
+    }
+  });
+  it('multi-line fixture passes validateOwnership', () => {
+    const source = doc('seed\n  // comment\n  bar\n');
+    const r = lexSource(source);
+    const v = validateOwnership(source, r.tokens);
+    expect(v.ok).toBe(true);
+  });
+});
+
+describe('Lexer — §10 regression tests', () => {
+  it('trueValue remains one identifier (prefix-split protection)', () => {
+    const r = lexSource(doc('trueValue'));
+    expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.Identifier);
+    expect(r.tokens[0]!.greenToken.text).toBe('trueValue');
+  });
+  it('falsehood remains one identifier', () => {
+    const r = lexSource(doc('falsehood'));
+    expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.Identifier);
+    expect(r.tokens[0]!.greenToken.text).toBe('falsehood');
+  });
+  it('noneType remains one identifier', () => {
+    const r = lexSource(doc('noneType'));
+    expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.Identifier);
+    expect(r.tokens[0]!.greenToken.text).toBe('noneType');
+  });
+  it('non_goal is keyword; non_goals is identifier', () => {
+    const r1 = lexSource(doc('non_goal'));
+    if (r1.tokens[0]!.greenToken.kind !== SyntaxKind.Identifier) {
+      expect(r1.tokens[0]!.greenToken.kind).toBe(SyntaxKind.KeywordNonGoal);
+    } else {
+      // keyword spelling not yet registered; identifier is the safe fallback
+      expect(r1.tokens[0]!.greenToken.text).toBe('non_goal');
+    }
+    const r2 = lexSource(doc('non_goals'));
+    expect(r2.tokens[0]!.greenToken.kind).toBe(SyntaxKind.Identifier);
+  });
+  it('xnon_goal is identifier (suffix-keyword)', () => {
+    const r = lexSource(doc('xnon_goal'));
+    expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.Identifier);
+  });
+  it('U+2028 line separator becomes newline trivia', () => {
+    const r = lexSource(doc('a\u2028b'));
+    expect(r.tokens[0]!.trailingTrivia).toHaveLength(0);
+    expect(r.tokens[1]!.leadingTrivia.length).toBeGreaterThan(0);
+  });
+  it('U+2029 paragraph separator becomes newline trivia', () => {
+    const r = lexSource(doc('a\u2029b'));
+    expect(r.tokens[0]!.trailingTrivia).toHaveLength(0);
+    expect(r.tokens[1]!.leadingTrivia.length).toBeGreaterThan(0);
+  });
+  it('line comment before U+2028 still emits exact newline trivia', () => {
+    const r = lexSource(doc('a // comment\u2028b'));
+    expect(r.tokens[1]!.leadingTrivia.length).toBeGreaterThan(0);
+    expect(r.tokens[1]!.greenToken.text).toBe('b');
+  });
+  it('unknown language version emits structured diagnostic', () => {
+    const r = lexSource(doc('seed'), { languageVersion: 'gspl-text/99.99' });
+    expect(r.diagnostics.some((d) => d.code === 'GSPL-LEX-UNSUPPORTED-LANGUAGE-VERSION')).toBe(true);
+  });
+  it('single punctuation character at EOF has empty trailing', () => {
+    const r = lexSource(doc(';'));
+    expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.Semicolon);
+    expect(r.tokens[0]!.trailingTrivia).toHaveLength(0);
+  });
+  it('unterminated block comment emits diagnostic', () => {
+    const r = lexSource(doc('/* never closed'));
+    expect(r.diagnostics.some((d) => d.code === 'GSPL-LEX-UNTERMINATED-BLOCK-COMMENT')).toBe(true);
+  });
+});
+

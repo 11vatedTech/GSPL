@@ -8,7 +8,7 @@ export { scanNumericLiteral, type NumericScanResult, type NumericScannerOptions 
 export { scanStringLiteral, type StringScanResult, type StringScannerOptions } from './lex-string.js';
 export { scanLineComment, scanBlockComment, scanWhitespace, type TriviaScanResult, type CommentScannerOptions } from './lex-comment.js';
 export { scanIdentifierOrKeyword, scanPunctuationOrOperator, resolveKind, type IdentifierScanResult, type PunctOpResult } from './keyword.js';
-export { validateTokenStream, type TokenStreamValidationResult } from './validate.js';
+export { validateTokenStream, validateOwnership, type TokenStreamValidationResult } from './validate.js';
 export {
   LEXICAL_CONTRACT,
   KEYWORD_TABLE,

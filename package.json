@@ -6,12 +6,10 @@
   "type": "module",
   "engines": {
     "node": ">=20.0.0"
-  },
-  "workspaces": [
-    "packages/*",
-    "tools/*",
-    "packages/text-source"
-  ],
+  },    "workspaces": [
+      "packages/*",
+      "tools/*"
+    ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",

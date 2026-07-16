@@ -3,7 +3,11 @@
   "compilerOptions": {
     "outDir": "dist",
     "rootDir": ".",
-    "composite": true
+    "baseUrl": "../..",
+    "paths": {
+      "@gspl/text-source": ["./packages/text-source/src/index.ts"],
+      "@gspl/syntax-tree": ["./packages/syntax-tree/src/index.ts"]
+    }
   },
   "include": ["src/**/*", "test/**/*"]
 }

@@ -14,6 +14,9 @@ const FORBIDDEN = [
   { pattern: /\.cache\//, description: '.cache tracked' },
   { pattern: /\bbuild\//, description: 'build/ tracked' },
   { pattern: /\.turbo\//, description: '.turbo tracked' },
+  { pattern: /artifacts\/validation\/restart-/, description: 'artifacts/validation/restart-* tracked' },
+  { pattern: /artifacts\/validation\/runtime-/, description: 'artifacts/validation/runtime-* tracked' },
+  { pattern: /artifacts\/validation\/tmp-/, description: 'artifacts/validation/tmp-* tracked' },
 ];
 
 const r = spawnSync('git', ['ls-files'], { encoding: 'utf8' });

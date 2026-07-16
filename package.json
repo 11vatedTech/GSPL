@@ -2,30 +2,27 @@
   "name": "gspl-canon",
   "version": "0.1.0",
   "private": true,
-  "description": "GSPL Canon Foundation — the authoritative home of the Generative Seed Programming Language (GSPL) by 11vatedTech",
+  "description": "GSPL Canon Foundation \u00e2\u20ac\u201d the authoritative home of the Generative Seed Programming Language (GSPL) by 11vatedTech",
   "type": "module",
   "engines": {
     "node": ">=20.0.0"
   },
   "workspaces": [
     "packages/*",
-    "tools/*"
+    "tools/*",
+    "packages/text-source"
   ],
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "typecheck": "tsc --noEmit -p . && npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
-
     "clean": "node tools/repo-maintenance/dist/bin.js",
     "clean:dist": "node -e \"const fs=require('fs');for(const w of ['packages','tools']){const root=w;try{for(const name of fs.readdirSync(root)){const p=root+'/'+name+'/dist';if(fs.existsSync(p))fs.rmSync(p,{recursive:true,force:true})}}catch{}}\"",
     "clean:all": "node -e \"const fs=require('fs');function rm(p){try{fs.rmSync(p,{recursive:true,force:true})}catch{}};for(const w of ['packages','tools']){try{for(const name of fs.readdirSync(w)){rm(w+'/'+name+'/dist');rm(w+'/'+name+'/node_modules')}}catch{}}rm('node_modules')\"",
-
     "index:references": "node tools/reference-indexer/dist/bin.js --config reference-manifest/repos.config.json --output reference-manifest/source-manifest.json",
     "check:provenance": "node tools/provenance-checker/dist/bin.js --inventions canon/provenance/inventions.json --decisions docs/audit/architecture-decisions.json --sources canon/provenance/sources.json --report canon/provenance/validation-report.json",
-
     "validate": "npm run typecheck:all && npm run build && npm test && npm run test:property && npm run test:fuzz:ci && npm run test:mutation:ci && npm run test:archive-adversarial && npm run fixtures:generate && npm run check:roundtrip && npm run check:restart-reconstruction && npm run check:packages && npm run check:determinism && npm run check:conformance && npm run check:tracked-source && npm run check:clean-source && npm run package:source && npm run check:source-archive && npm run check:archive-reproducibility && npm run write:canonical-manifest",
-
     "canon:bootstrap": "node tools/canon-bootstrap/dist/bin.js --write-and-validate --repo-root .",
     "canon:check": "node tools/canon-bootstrap/dist/bin.js --validate --repo-root .",
     "index:check": "node tools/reference-indexer/dist/bin.js --config reference-manifest/repos.config.json --output reference-manifest/source-manifest.json --check",
@@ -33,29 +30,22 @@
     "check:determinism": "node tools/repo-maintenance/dist/check-determinism-bin.js",
     "check:clean-source": "node tools/repo-maintenance/dist/check-clean-bin.js",
     "check:clean-bin": "node tools/repo-maintenance/dist/check-clean-bin.js",
-
     "package:source": "node --experimental-strip-types scripts/source-package/cli.mts .",
     "check:source-archive": "node --experimental-strip-types scripts/source-package/verify.mts build/gspl-canon-source.tar.gz build/gspl-canon-source-manifest.json",
-
     "write:canonical-manifest": "node --experimental-strip-types scripts/write-canonical-manifest.mts .",
     "compare:canonical-manifests": "node --experimental-strip-types scripts/compare-canonical-manifests.mts",
-
     "test:property": "vitest run packages/compiler-core/test/property.test.ts",
     "test:fuzz": "vitest run packages/compiler-core/test/sabotage.test.ts packages/compiler-core/test/mutation.test.ts",
     "test:mutation": "vitest run packages/compiler-core/test/mutation.test.ts packages/compiler-core/test/sabotage.test.ts",
     "test:fuzz:ci": "vitest run packages/compiler-core/test/sabotage.test.ts",
     "test:mutation:ci": "vitest run packages/compiler-core/test/mutation.test.ts",
-
     "benchmark": "vitest run packages/compiler-core/test/benchmark.test.ts",
     "fixtures:generate": "vitest run packages/compiler-core/test/canonicalization.test.ts",
     "check:roundtrip": "vitest run packages/compiler-core/test/canonicalization.test.ts",
-
     "check:packages": "vitest run packages/package-resolver/test/",
     "check:restart-reconstruction": "node --experimental-strip-types scripts/restart-reconstruction.mts",
     "check:conformance": "vitest run packages/compiler-core/test/canonicalization.test.ts",
-
     "typecheck:all": "tsc --noEmit -p .",
-
     "check:archive-reproducibility": "node --experimental-strip-types scripts/check-archive-reproducibility.mts",
     "check:tracked-source": "node --experimental-strip-types scripts/check-tracked-source.mts",
     "test:archive-adversarial": "vitest run scripts/source-package.test/archive-adversarial.test.ts"

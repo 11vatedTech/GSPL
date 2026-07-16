@@ -132,6 +132,44 @@ export interface SourceLimits {
   readonly maxTriviaCodeUnits: number;
   readonly maxTokenCount: number;
   readonly maxDiagnostics: number;
+  /** Maximum code units a single numeric literal may consume. */
+  readonly maxNumericCodeUnits: number;
+  /** Maximum nesting depth for block comments. */
+  readonly maxCommentNestingDepth: number;
+}
+
+/**
+ * Limits that may legitimately be zero without degenerating into a security
+ * hole: nesting depth (zero disables nesting).
+ */
+const ZERO_ALLOWED: ReadonlySet<keyof SourceLimits> = new Set<keyof SourceLimits>([
+  'maxCommentNestingDepth',
+]);
+
+/**
+ * Validate that every SourceLimit is a finite non-negative safe integer; reject
+ * zero wherever zero would be nonsensical (Prompt 3 §2). Caller-supplied
+ * limits MUST be validated by the entry point before being passed into the
+ * lexer or source loader.
+ */
+export function validateSourceLimits(limits: SourceLimits): readonly string[] {
+  const errs: string[] = [];
+  const keys: ReadonlyArray<keyof SourceLimits> = [
+    'maxSourceBytes', 'maxDecodedCodeUnits', 'maxLines', 'maxLineLength',
+    'maxIdentifierCodeUnits', 'maxStringCodeUnits', 'maxCommentCodeUnits',
+    'maxTriviaCodeUnits', 'maxTokenCount', 'maxDiagnostics',
+    'maxNumericCodeUnits', 'maxCommentNestingDepth',
+  ];
+  for (const k of keys) {
+    const v = limits[k];
+    if (!Number.isFinite(v) || !Number.isInteger(v) || v < 0 || v > Number.MAX_SAFE_INTEGER) {
+      errs.push(`${k}=${v} is invalid (must be finite non-negative safe integer)`);
+    }
+    if (v === 0 && !ZERO_ALLOWED.has(k)) {
+      errs.push(`${k}=0 is nonsensical; expected a positive bound`);
+    }
+  }
+  return errs;
 }
 
 export const DEFAULT_SOURCE_LIMITS: SourceLimits = {
@@ -145,6 +183,8 @@ export const DEFAULT_SOURCE_LIMITS: SourceLimits = {
   maxTriviaCodeUnits: 1 * 1024 * 1024,
   maxTokenCount: 1_000_000,
   maxDiagnostics: 10_000,
+  maxNumericCodeUnits: 4096,
+  maxCommentNestingDepth: 64,
 };
 
 export interface SourceRequest {

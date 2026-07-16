@@ -1,8 +1,8 @@
 /**
  * Token stream invariant validation. Prompt 3 Section 21.
  */
-import type { SourceDocument } from '../../text-source/src/index.js';
-import { SyntaxKind } from '../../syntax-tree/src/index.js';
+import type { SourceDocument } from '@gspl/text-source';
+import { SyntaxKind } from '@gspl/syntax-tree';
 import type { Token } from './token.js';
 
 export interface TokenStreamValidationResult {

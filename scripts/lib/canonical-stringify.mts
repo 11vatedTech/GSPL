@@ -165,6 +165,7 @@ export function canonicalHash(value: unknown): string {
  * that Buffer.from(bytes).toString('binary') suffers from. Hashes the bytes
  * directly so cross-platform results are byte-stable.
  */
-export function canonicalBytesHash(bytes: Uint8Array): string {
+export function canonicalBytesHash(bytes: Buffer | Uint8Array): string {
+  // Buffer extends Uint8Array; createHash.update accepts both directly (no copy needed).
   return 'sha256:' + createHash('sha256').update(bytes).digest('hex');
 }

@@ -1,9 +1,9 @@
 /**
- * Token — the lexer's output unit. Wraps a green token with trivia and span.
- * Prompt 3 §12, §13.
+ * Token, LexResult, deterministic and operational statistics.
+ * Prompt 3 Section 12, 13, 15.
  */
-import type { SourceDocument, SourceSpan, Diagnostic } from '../../text-source/src/index.js';
-import type { GreenToken, GreenTrivia } from '../../syntax-tree/src/index.js';
+import type { SourceDocument, SourceSpan, Diagnostic } from '@gspl/text-source';
+import type { GreenToken, GreenTrivia } from '@gspl/syntax-tree';
 
 export type SemanticValue = string | bigint | number | boolean | null;
 
@@ -15,6 +15,7 @@ export interface Token {
   readonly semanticValue?: SemanticValue;
 }
 
+/** Deterministic — reproducible from source bytes and the lexical profile. */
 export interface LexerStatistics {
   readonly tokenCount: number;
   readonly triviaCount: number;
@@ -30,6 +31,10 @@ export interface LexerStatistics {
   readonly maxTokenLength: number;
   readonly totalTokenWidth: number;
   readonly totalTriviaWidth: number;
+}
+
+/** Operational metrics. NEVER participate in deterministic JSON/hashing. */
+export interface LexerOperationalMetrics {
   readonly elapsedMs: number;
 }
 
@@ -38,5 +43,6 @@ export interface LexResult {
   readonly tokens: readonly Token[];
   readonly diagnostics: readonly Diagnostic[];
   readonly statistics: LexerStatistics;
+  readonly operational?: LexerOperationalMetrics;
   readonly complete: boolean;
 }

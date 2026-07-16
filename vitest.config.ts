@@ -1,13 +1,15 @@
 import { defineConfig } from 'vitest/config';
 
+const packageAlias = (name: string) => new URL(`./packages/${name}/src/index.ts`, import.meta.url).pathname;
+
 export default defineConfig({
-  test: {
-    globals: false,
-    environment: 'node',
-    include: ['packages/*/test/**/*.test.ts', 'tools/*/test/**/*.test.ts', 'scripts/**/*.test.ts', 'tests/**/*.test.ts'],
-    coverage: {
-      provider: 'v8',
-      reporter: ['text', 'json', 'html'],
+  resolve: {
+    alias: {
+      '@gspl/text-source': packageAlias('text-source'),
+      '@gspl/syntax-tree': packageAlias('syntax-tree'),
     },
+  },
+  test: {
+    environment: 'node',
   },
 });

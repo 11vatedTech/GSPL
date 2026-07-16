@@ -7,7 +7,7 @@ function doc(text: string): SourceDocument {
   return SourceDocument.create('test.gspl', text);
 }
 
-function kinds(tokens: { greenToken: GreenToken }[]): number[] {
+function kinds(tokens: ReadonlyArray<{ readonly greenToken: GreenToken }>): number[] {
   return tokens.map(t => t.greenToken.kind);
 }
 

@@ -60,4 +60,20 @@ export default defineWorkspace([
       },
     },
   },
+  {
+    extends: './vitest.config.ts',
+    test: {
+      name: 'frontend',
+      include: ['packages/frontend/**/*.test.ts'],
+      environment: 'node',
+    },
+    resolve: {
+      alias: {
+        '@gspl/text-source': packageAlias('text-source'),
+        '@gspl/syntax-tree': packageAlias('syntax-tree'),
+        '@gspl/lexer': packageAlias('lexer'),
+        '@gspl/parser': packageAlias('parser'),
+      },
+    },
+  },
 ]);

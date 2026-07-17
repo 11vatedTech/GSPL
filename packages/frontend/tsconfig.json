@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "./dist"
+  },
+  "include": ["src/**/*", "test/**/*"],
+  "references": [
+    { "path": "../text-source" },
+    { "path": "../syntax-tree" },
+    { "path": "../lexer" },
+    { "path": "../parser" }
+  ]
+}

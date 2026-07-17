@@ -46,7 +46,9 @@
       "@gspl/compiler-core": ["./packages/compiler-core/src/index.ts"],
       "@gspl/compiler-core/*": ["./packages/compiler-core/src/*"],
       "@gspl/package-resolver": ["./packages/package-resolver/src/index.ts"],
-      "@gspl/package-resolver/*": ["./packages/package-resolver/src/*"]}
+      "@gspl/package-resolver/*": ["./packages/package-resolver/src/*"],
+      "@gspl/parser": ["./packages/parser/src/index.ts"],
+      "@gspl/parser/*": ["./packages/parser/src/*"]}
   },
   "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "tools/*/src/**/*.ts", "tools/*/test/**/*.ts", "scripts/**/*.ts", "scripts/**/*.mts", "tests/**/*.ts"],
   "exclude": ["node_modules", "**/dist", "**/coverage", "**/.vite"]

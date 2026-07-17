@@ -45,4 +45,19 @@ export default defineWorkspace([
       },
     },
   },
+  {
+    extends: './vitest.config.ts',
+    test: {
+      name: 'parser',
+      include: ['packages/parser/**/*.test.ts'],
+      environment: 'node',
+    },
+    resolve: {
+      alias: {
+        '@gspl/text-source': packageAlias('text-source'),
+        '@gspl/syntax-tree': packageAlias('syntax-tree'),
+        '@gspl/lexer': packageAlias('lexer'),
+      },
+    },
+  },
 ]);

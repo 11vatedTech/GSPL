@@ -1,0 +1,5 @@
+seed 1.0
+gene sum: scalar = 1 + 2
+gene diff: scalar = 5 - 3
+gene prod: scalar = 4 * 2
+gene quot: scalar = 10 / 2

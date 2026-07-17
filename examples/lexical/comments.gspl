@@ -1,0 +1,5 @@
+seed 1.0
+// top-level comment
+gene x: scalar = 100 // inline comment
+/* block comment */
+gene y: scalar = 200

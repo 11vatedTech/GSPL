@@ -1,0 +1,3 @@
+seed 1.0
+gene x: scalar = 42
+gene y: scalar = 100

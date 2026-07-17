@@ -1,0 +1,4 @@
+seed 1.0
+gene a: scalar = 42
+gene b: scalar = 0xFF
+gene c: scalar = 3.14

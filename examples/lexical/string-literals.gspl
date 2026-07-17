@@ -1,0 +1,3 @@
+seed 1.0
+gene name: string = hello
+gene desc: string = multiline text

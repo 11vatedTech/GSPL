@@ -47,31 +47,64 @@ function normalizeNewlines(text: string, nl: string): string {
 }
 
 /** Walk the red tree emitting trivia + token text with normalized newlines.
- *  Uses the same trivia model as printCST for lossless reconstruction. */
+ *  Applies structural indentation based on nesting depth. */
 export function formatSyntaxTree(tree: SyntaxTree, options?: Partial<FormatOptions>): FormatResult {
   var opts: FormatOptions = { ...DEFAULT_FORMAT_OPTIONS, ...options };
   var nl = NEWLINE_BY_POLICY[opts.newline] || "\n";
   var diags: Diagnostic[] = [];
   var result = "";
+  var indentStr = " ".repeat(opts.indentWidth);
+  var currentDepth = 0;
+  var pendingIndent = false;
+
+  // Token kinds that increase indentation after themselves
+  var OPENERS: Record<number, boolean> = {};
+  OPENERS[91/*[*/] = true; OPENERS[123/*{*/] = true; OPENERS[40/*(*/] = true;
+  var CLOSERS: Record<number, boolean> = {};
+  CLOSERS[93/*]*/] = true; CLOSERS[125/*}*/] = true; CLOSERS[41/*)*/] = true;
+
+  function emit(s: string): void {
+    if (pendingIndent && s.length > 0 && s.charCodeAt(0) !== 10 && s.charCodeAt(0) !== 13) {
+      result += indentStr.repeat(currentDepth);
+      pendingIndent = false;
+    }
+    result += s;
+  }
 
   function walkNode(node: RedNode): void {
+    var prevDepth = currentDepth;
     for (var i = 0; i < node.children.length; i++) {
       var child = node.children[i];
       if (isRedToken(child)) {
-        // Emit leading trivia
+        // Emit leading trivia with indentation after newlines
         for (var j = 0; j < child.leadingTrivia.length; j++) {
-          result += normalizeNewlines(child.leadingTrivia[j].text, nl);
+          var lt = normalizeNewlines(child.leadingTrivia[j].text, nl);
+          emit(lt);
+          if (lt.indexOf(nl) >= 0) pendingIndent = true;
+        }
+        var tokText = child.text;
+        // Closers: decrease depth BEFORE emitting so they align with openers
+        if (tokText.length === 1 && CLOSERS[tokText.charCodeAt(0)]) {
+          if (currentDepth > 0) currentDepth--;
+          if (pendingIndent) pendingIndent = false;
         }
         // Emit token text
-        result += normalizeNewlines(child.text, nl);
-        // Emit trailing trivia
+        emit(normalizeNewlines(tokText, nl));
+        // Openers: increase depth AFTER emitting (next line indented more)
+        if (tokText.length === 1 && OPENERS[tokText.charCodeAt(0)]) {
+          currentDepth++;
+        }
+        // Emit trailing trivia (preserves original spacing)
         for (var k = 0; k < child.trailingTrivia.length; k++) {
-          result += normalizeNewlines(child.trailingTrivia[k].text, nl);
+          var tt = normalizeNewlines(child.trailingTrivia[k].text, nl);
+          emit(tt);
+          if (tt.indexOf(nl) >= 0) pendingIndent = true;
         }
       } else if (isRedNode(child)) {
         walkNode(child);
       }
     }
+    currentDepth = prevDepth;
   }
 
   walkNode(tree.root);

@@ -70,7 +70,7 @@
     "test:frontend": "vitest --workspace=vitest.workspace.ts run packages/frontend/test",
     "test:frontend-property": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/property.test.ts",
     "test:frontend-fuzz": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/fuzz.test.ts",
-    "test:frontend-mutation": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/mutation.test.ts",
+    "test:frontend-mutation": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/genuine-mutation.test.ts",
     "test:frontend-security": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/security.test.ts",
     "test:frontend-limits": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/limits.test.ts",
     "test:frontend-formatter-law": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/formatter-law.test.ts",

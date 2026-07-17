@@ -17,20 +17,21 @@ var TYPE_GENE_MAP: Record<string, GeneTypeId> = {
   "string": "GS-002" as GeneTypeId,
   "boolean": "GS-003" as GeneTypeId,
   "absence": "GS-004" as GeneTypeId,
+  "any": "GS-001" as GeneTypeId,
 };
 
-function mapTypeToGeneType(tn: string, diags: Diagnostic[]): GeneTypeId {
+function mapTypeToGeneType(tn: string, diags: Diagnostic[]): GeneTypeId | null {
   var m = tn.toLowerCase();
   var mapped = TYPE_GENE_MAP[m];
   if (mapped) return mapped;
   diags.push(makeDiagnostic({
     code: "GSPL-LOWER-UNKNOWN-TYPE",
-    message: "unknown type \"" + tn + "\" in canonical lowering, using GS-001 (scalar) as fallback",
-    severity: "warning",
+    message: "unknown type \"" + tn + "\" in canonical lowering — cannot produce canonical seed",
+    severity: "error",
     span: { sourceId: "src:lower" as any, start: 0, end: 0 },
     category: "lower", phase: "lower", canonical: true,
   }));
-  return "GS-001" as GeneTypeId;
+  return null;
 }
 
 function parseInteger(text: string, diags: Diagnostic[]): number {
@@ -78,11 +79,18 @@ export function lowerToCanonicalSeed(program: AuthoringProgram, options: Canonic
   }
   var seed = program.seed;
   var genes: Record<string, any> = {};
+  var hasFatalTypeError = false;
   for (var i = 0; i < seed.genes.length; i++) {
     var g = seed.genes[i];
+    var declaredType = (g as any).declaredType || (g as any).resolvedType || "scalar";
+    var geneType = mapTypeToGeneType(declaredType, diags);
+    if (geneType === null) { hasFatalTypeError = true; continue; }
+    // Only evaluate value after type check passes
     var v = g.value ? avToAny(g.value, diags) : undefined;
-    var declaredType = (g as any).resolvedType || (g as any).declaredType || "scalar";
-    genes[g.name] = { type: mapTypeToGeneType(declaredType, diags), value: v, confidence: g.confidence, locked: false };
+    genes[g.name] = { type: geneType, value: v, confidence: g.confidence, locked: false };
+  }
+  if (hasFatalTypeError) {
+    return { seed: undefined, diagnostics: diags, ok: false };
   }
   var capabilities: string[] = [];
   for (var j = 0; j < seed.targets.length; j++) { var tName = seed.targets[j].name; if (tName) capabilities.push(tName); }

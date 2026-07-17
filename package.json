@@ -82,8 +82,8 @@
     "test:frontend-formatter-law": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/formatter-law.test.ts",
     "check:frontend-determinism": "node --experimental-strip-types scripts/check-frontend-determinism.mts",
     "check:frontend-limit-coverage": "node --experimental-strip-types scripts/check-frontend-limit-coverage.mts",
-    "fixtures:frontend": "node --experimental-strip-types scripts/generate-frontend-fixtures.mts",
-    "check:frontend-conformance": "node --experimental-strip-types scripts/generate-frontend-fixtures.mts"
+    "fixtures:frontend": "vitest --workspace=vitest.workspace.ts run scripts/generate-frontend-fixtures.mts",
+    "check:frontend-conformance": "vitest --workspace=vitest.workspace.ts run scripts/generate-frontend-fixtures.mts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

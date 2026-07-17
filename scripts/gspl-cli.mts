@@ -11,7 +11,7 @@ import * as path from "node:path";
 
 var args = process.argv.slice(2);
 var cmd = args[0];
-var targets = args.slice(1);
+var targets = args.slice(1).filter(function(a: string) { return a !== "--json" && a !== "--output" && a !== (outputFile || ""); });
 
 if (!cmd || cmd === "help" || cmd === "--help") {
   console.log("gspl <command> [files...]");
@@ -38,21 +38,27 @@ function getLogicalPath(filePath: string): string {
   return path.basename(filePath);
 }
 
+var useJson = args.indexOf("--json") >= 0;
+var outputFile = (function() { var oi = args.indexOf("--output"); return oi >= 0 ? args[oi + 1] : undefined; })();
+
 function runCommand(fn: (src: string, lp: string) => string): void {
   var files = targets.length > 0 ? targets : ["-"];
   var exitCode = 0;
+  var allOutput = "";
   for (var i = 0; i < files.length; i++) {
     try {
       var src = readSource(files[i]);
       var lp = getLogicalPath(files[i]);
       var out = fn(src, lp);
-      console.log(out);
-      if (out.indexOf('"severity":"error"') >= 0) exitCode = 1;
+      allOutput += out;
+      if (cmd !== "format" && out.indexOf('"severity":"error"') >= 0) exitCode = 1;
     } catch (e: any) {
       console.error("gspl:", cmd, files[i] + ":", e.message || String(e));
-      exitCode = 2;
+      exitCode = cmd === "format" ? 1 : 2;
     }
   }
+  if (outputFile) { fs.writeFileSync(outputFile, allOutput, "utf-8"); }
+  else { process.stdout.write(allOutput); }
   process.exit(exitCode);
 }
 

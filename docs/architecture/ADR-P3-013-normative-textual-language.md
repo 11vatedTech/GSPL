@@ -53,6 +53,22 @@ Authoring sugar lowers **deterministically and canonically**.
 
 Only `"1.0"` is accepted as a `VersionLiteral`. The textual language rejects wildcards and major-only versions in v1.
 
+### Decision 7 - bounded nested block comments
+
+The textual language inherits the gspl-text/1.0 lexical profile: nested `/* ... */` block comments are **enabled with a bounded depth**. The bound is `SourceLimits.maxCommentNestingDepth` (default `64` from `DEFAULT_SOURCE_LIMITS`). The grammar contract records this in two fields: `nestedCommentPolicy: enabled-with-bounded-depth` and `nestedCommentBoundedDepth: <mirror of SourceLimits>`. Exceeding the bound emits exactly one `GSPL-LEX-COMMENT-NESTING-LIMIT` diagnostic per violating comment token; a profile that disables nesting emits `GSPL-LEX-COMMENT-NESTING-DISABLED`.
+
+The textual grammar contract and the lexer profile are kept in machine-checked bidirectional sync through `npm run check:syntax-contract`. The check now loads `LexicalLanguageProfile` for the canonical language version via `resolveLanguageProfile("gspl-text/1.0", DEFAULT_SOURCE_LIMITS)` and compares the three fields: `allowNestedBlockComments`, `maxCommentNestingDepth`, and the contract's `nestedCommentBoundedDepth`.
+
+Alternatives considered:
+- **Alt-NestedUnbounded:** allow unlimited nesting. **Rejected** because a hostile source could blow the parser stack with deeply nested block comments; the lexical slice must bound recursion BEFORE parser work begins.
+- **Alt-NestedDisabled:** some languages disable nested block comments entirely. **Rejected** because usable authored comments often need to delimiter-quote code blocks (e.g. embedded `/* */` inside `/** */` documentation); disabling reduces the value of the documentation-comment policy.
+
+Migration; security; determinism; validation references follow directly:
+- The depth is governed by `SourceLimits.maxCommentNestingDepth`; tuning the limit does not require grammar changes.
+- A malicious source with thousands of opening `/*` characters is bounded at the lexer entry point; control returns before any parser work.
+- The depth threshold is fixed at 64 across environments; the textual grammar contract mirrors this value.
+- Future versions of gspl-text may tighten or relax this bound by changing `SourceLimits.maxCommentNestingDepth`. The grammar contract is updated in lockstep.
+
 ## Alternatives considered
 
 ### Alt 1 - Restrict to JSON

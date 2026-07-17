@@ -39,6 +39,26 @@ normative only at the **grammar** layer; lexemes themselves are
 fully delegated. Every name appearing in this document refers to a
 `SyntaxKind` value registered in `packages/syntax-tree/src/syntax-kind.ts`.
 
+The textual language inherits the gspl-text/1.0 lexical profile from
+`packages/lexer/src/lang-profile.ts`. Three policy points bind the textual
+language to the lexer contract:
+
+* **Nested block comments are enabled with a bounded depth.** The bound
+  is `SourceLimits.maxCommentNestingDepth` (default `64`, per
+  `DEFAULT_SOURCE_LIMITS`). Exceeding it emits exactly one
+  `GSPL-LEX-COMMENT-NESTING-LIMIT` diagnostic per violating comment
+  token. If the language profile disables nesting, the diagnostic
+  emitted is `GSPL-LEX-COMMENT-NESTING-DISABLED`. A future language
+  version that disables nesting must mirror this in the grammar
+  contract under `nestedCommentPolicy: "disabled"`.
+* **Comment-nesting grammar contract.** The machine-readable contract
+  records the nesting policy in two fields. Today:
+  `nestedCommentPolicy: "enabled-with-bounded-depth"` and
+  `nestedCommentBoundedDepth: 64`. Tunability lives on
+  `SourceLimits.maxCommentNestingDepth`, NOT on the textual grammar.
+* **Bidirectional sync.** `scripts/check-syntax-contract.mts` loads
+  `LexicalLanguageProfile` via `resolveLanguageProfile('gspl-text/1.0', DEFAULT_SOURCE_LIMITS)` and asserts that the contract's policy and depth are coherent with the production lexer profile. A mismatch fails the build.
+
 ## 3. Top-level structure
 
 A textual source is either:

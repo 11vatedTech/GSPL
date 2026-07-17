@@ -27,16 +27,26 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "baseUrl": ".",
-    "paths": {
-      "@gspl/text-source": ["./packages/text-source/src/index.ts"],
+    "paths": {      "@gspl/text-source": ["./packages/text-source/src/index.ts"],
       "@gspl/text-source/*": ["./packages/text-source/src/*"],
       "@gspl/syntax-tree": ["./packages/syntax-tree/src/index.ts"],
       "@gspl/syntax-tree/*": ["./packages/syntax-tree/src/*"],
+      "@gspl/lexer": ["./packages/lexer/src/index.ts"],
+      "@gspl/lexer/*": ["./packages/lexer/src/*"],
+      "@gspl/canon-foundation": ["./packages/canon-foundation/src/index.ts"],
+      "@gspl/canon-foundation/*": ["./packages/canon-foundation/src/*"],
+      "@gspl/seed-format": ["./packages/seed-format/src/index.ts"],
+      "@gspl/seed-format/*": ["./packages/seed-format/src/*"],
+      "@gspl/gene-protocol": ["./packages/gene-protocol/src/index.ts"],
+      "@gspl/gene-protocol/*": ["./packages/gene-protocol/src/*"],
+      "@gspl/ir-model": ["./packages/ir-model/src/index.ts"],
+      "@gspl/ir-model/*": ["./packages/ir-model/src/*"],
+      "@gspl/gspl-types": ["./packages/gspl-types/src/index.ts"],
+      "@gspl/gspl-types/*": ["./packages/gspl-types/src/*"],
       "@gspl/compiler-core": ["./packages/compiler-core/src/index.ts"],
       "@gspl/compiler-core/*": ["./packages/compiler-core/src/*"],
       "@gspl/package-resolver": ["./packages/package-resolver/src/index.ts"],
-      "@gspl/package-resolver/*": ["./packages/package-resolver/src/*"]
-    }
+      "@gspl/package-resolver/*": ["./packages/package-resolver/src/*"]}
   },
   "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "tools/*/src/**/*.ts", "tools/*/test/**/*.ts", "scripts/**/*.ts", "scripts/**/*.mts", "tests/**/*.ts"],
   "exclude": ["node_modules", "**/dist", "**/coverage", "**/.vite"]

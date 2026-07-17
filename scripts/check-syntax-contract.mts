@@ -12,6 +12,8 @@
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
+import { resolveLanguageProfile, type LexicalLanguageProfile } from '@gspl/lexer';
+import { DEFAULT_SOURCE_LIMITS } from '@gspl/text-source';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,6 +31,8 @@ interface ContractJson {
     readonly documentation: readonly [string, string];
   };
   readonly nestedCommentPolicy: string;
+  readonly nestedCommentBoundedDepth?: number;
+  readonly nestedCommentGovernedBy?: string;
   readonly documentationCommentPolicy: string;
   readonly identifierPolicy: Readonly<Record<string, unknown>>;
   readonly keywords: readonly { readonly lexeme: string; readonly SyntaxKind: string }[];
@@ -168,8 +172,39 @@ async function main(): Promise<void> {
     violations.push('contract.documentationCommentPolicy must reference EOF');
   }
 
-  if (contract.nestedCommentPolicy !== 'disabled') {
-    violations.push('contract.nestedCommentPolicy must be "disabled"');
+
+  // Invariants 11-14: nest the lexer profile coherently with the contract.
+  const resolvedProfileVersion = resolveLanguageProfile('gspl-text/1.0', DEFAULT_SOURCE_LIMITS);
+  const profile: LexicalLanguageProfile = resolvedProfileVersion.profile;
+
+  // Invariant 11: policy coherence.
+  if (profile.allowNestedBlockComments) {
+    if (contract.nestedCommentPolicy !== 'enabled-with-bounded-depth') {
+      violations.push('contract.nestedCommentPolicy must be "enabled-with-bounded-depth" because LexicalLanguageProfile.allowNestedBlockComments=true (was: ' + JSON.stringify(contract.nestedCommentPolicy) + ')');
+    }
+    // Invariant 12: bounded depth must equal profile.maxCommentNestingDepth.
+    if (contract.nestedCommentBoundedDepth === undefined) {
+      violations.push('contract.nestedCommentBoundedDepth is required because policy is "enabled-with-bounded-depth"');
+    } else if (contract.nestedCommentBoundedDepth !== profile.maxCommentNestingDepth) {
+      violations.push('contract.nestedCommentBoundedDepth=' + contract.nestedCommentBoundedDepth + ' does not match LexicalLanguageProfile.maxCommentNestingDepth=' + profile.maxCommentNestingDepth);
+    }
+  } else {
+    if (contract.nestedCommentPolicy !== 'disabled') {
+      violations.push('contract.nestedCommentPolicy must be "disabled" because LexicalLanguageProfile.allowNestedBlockComments=false (was: ' + JSON.stringify(contract.nestedCommentPolicy) + ')');
+    }
+    if (contract.nestedCommentBoundedDepth !== undefined) {
+      violations.push('contract.nestedCommentBoundedDepth must be absent when policy is "disabled"');
+    }
+  }
+
+  // Invariant 13: profile depth is governed by DEFAULT_SOURCE_LIMITS.
+  if (profile.maxCommentNestingDepth !== DEFAULT_SOURCE_LIMITS.maxCommentNestingDepth) {
+    violations.push('LexicalLanguageProfile.maxCommentNestingDepth=' + profile.maxCommentNestingDepth + ' does not equal DEFAULT_SOURCE_LIMITS.maxCommentNestingDepth=' + DEFAULT_SOURCE_LIMITS.maxCommentNestingDepth);
+  }
+
+  // Invariant 14: governed-by pointer.
+  if (contract.nestedCommentGovernedBy !== undefined && contract.nestedCommentGovernedBy !== 'SourceLimits.maxCommentNestingDepth') {
+    violations.push('contract.nestedCommentGovernedBy should be "SourceLimits.maxCommentNestingDepth" (was: ' + JSON.stringify(contract.nestedCommentGovernedBy) + ')');
   }
 
   if (violations.length > 0) fail(violations);
@@ -182,8 +217,9 @@ async function main(): Promise<void> {
   console.log('  parserNodeKinds: ' + contract.parserNodeKinds.length);
   console.log('  diagnostics    : ' + contract.diagnosticCodes.length);
   console.log('  newlines       : ' + contract.newlineForms.length);
+  console.log('  nestedPolicy   : ' + contract.nestedCommentPolicy + (contract.nestedCommentBoundedDepth !== undefined ? ' (depth=' + contract.nestedCommentBoundedDepth + ')' : ''));
   console.log('');
-  console.log('Production registry and GSPL_GRAMMAR.contract.json are in bidirectional sync.');
+  console.log('Production registry, LexicalLanguageProfile, GSPL_GRAMMAR.contract.json are in bidirectional sync.');
 }
 
 main().catch((e: unknown) => {

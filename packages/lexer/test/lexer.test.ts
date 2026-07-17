@@ -66,7 +66,7 @@ describe('Lexer — numbers', () => {
   it('decimal float', () => {
     const r = lexSource(doc('3.14'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.FloatLiteral);
-    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'decimal-float', value: '3.14' });
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'decimal-float', value: '3.14', negativeZero: false });
   });
   it('float with exponent', () => {
     const r = lexSource(doc('1.5e10'));
@@ -467,10 +467,17 @@ describe('Lexer — code-point identifier scanning (Prompt 3 Final Closure §4-�
     expect(r2.tokens[0]!.greenToken.text).toBe('cafe\u0301');
     expect(r1.tokens[0]!.greenToken.text).not.toEqual(r2.tokens[0]!.greenToken.text);
   });
-  it('§5 — non-ASCII identifier carries IdentifierLexicalValue metadata', () => {
+  it('§6 — ASCII identifier carries IdentifierLexicalValue metadata (Final Unlock §6)', () => {
     const r = lexSource(doc('playerHealth'));
     const sem = r.tokens[0]!.semanticValue;
-    expect(sem).toBeUndefined(); /* ASCII fast path. */
+    expect(sem).toBeDefined();
+    expect((sem as any).kind).toBe('identifier');
+    const id = (sem as any).identity;
+    expect(id.original).toBe('playerHealth');
+    expect(id.normalized).toBe('playerHealth');
+    expect(id.scripts).toEqual(['Latin']);
+    expect(id.confusableSkeleton).toMatch(/^[a-zA-Z]+$/);
+    expect((sem as any).findings).toEqual([]);
   });
   it('§5 — Latin-extended identifier carries IdentifierLexicalValue metadata', () => {
     const r = lexSource(doc('caf\u00e9'));

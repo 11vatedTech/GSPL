@@ -2,6 +2,7 @@
 import { isRedToken, isRedNode, printRedToken, type SyntaxTree, type RedNode } from "@gspl/syntax-tree";
 import type { Diagnostic } from "@gspl/text-source";
 import { makeDiagnostic } from "@gspl/text-source";
+import { parseText, type ParseResult } from "@gspl/parser";
 
 export interface FormatOptions {
   readonly indentWidth: number;
@@ -86,16 +87,23 @@ export function formatSyntaxTree(tree: SyntaxTree, options?: Partial<FormatOptio
     result = result.slice(0, result.length - nlLen);
   }
 
-  // Compare with source to determine changed
-  // Reconstruct original via printCST-like walk and compare
+  // Compare with source to determine changed: normalize both sides identically
+  // Strip trailing newlines on both before comparison
   var original = "";
   for (var i2 = 0; i2 < tree.root.children.length; i2++) {
     var c = tree.root.children[i2];
     if (isRedToken(c)) original += printRedToken(c);
     else if (isRedNode(c)) original += printRedTokenRecursive(c);
   }
-  var changed = normalizeNewlines(original, nl).replace(/[ \t]+$/gm, "") !==
-                normalizeNewlines(result, nl).replace(/[ \t]+$/gm, "");
+  // Apply same newline normalization and trailing-newline policy to both
+  var normOrig = normalizeNewlines(original, nl);
+  var normResult = normalizeNewlines(result, nl);
+  // Strip trailing newlines on both sides for fair comparison
+  while (normOrig.length >= nlLen && normOrig.slice(-nlLen) === nl) normOrig = normOrig.slice(0, -nlLen);
+  while (normResult.length >= nlLen && normResult.slice(-nlLen) === nl) normResult = normResult.slice(0, -nlLen);
+  // Strip trailing whitespace per line (both sides)
+  var changed = normOrig.replace(/[ \t]+$/gm, "") !==
+                normResult.replace(/[ \t]+$/gm, "");
 
   return { text: result, diagnostics: diags, changed: changed };
 }
@@ -113,11 +121,11 @@ function printRedTokenRecursive(node: RedNode): string {
 export function formatSource(source: string, options?: Partial<FormatOptions>): FormatResult {
   var diags: Diagnostic[] = [];
   try {
-    var m = require("@gspl/parser") as typeof import("@gspl/parser");
-    var parseResult = m.parseText("fmt.gspl", source);
+    var parseResult: ParseResult = parseText("fmt.gspl", source);
     var fmtResult = formatSyntaxTree(parseResult.root, options);
-    diags = fmtResult.diagnostics.slice();
-    return fmtResult;
+    // Merge parser diagnostics with formatter diagnostics
+    diags = [...parseResult.diagnostics, ...fmtResult.diagnostics];
+    return { text: fmtResult.text, diagnostics: diags, changed: fmtResult.changed };
   } catch (e: any) {
     diags.push(makeDiagnostic({
       code: "GSPL-FORMAT-PARSE-ERROR",

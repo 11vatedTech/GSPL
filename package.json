@@ -60,7 +60,7 @@
     "check:package-boundaries": "node --experimental-strip-types scripts/check-package-boundaries.mts",
     "check:diagnostic-coverage": "node -e \"var fs=require('fs');var s=fs.readFileSync('packages/frontend/src/diagnostic-registry.ts','utf8');var m=s.match(/GSPL-[A-Z-]+/g)||[];var codes=new Set(m);console.log('CHECK-DIAGNOSTIC-COVERAGE OK - '+codes.size+' unique codes registered');process.exit(codes.size>=12?0:1)\"",
     "gspl:explain": "node --experimental-strip-types scripts/gspl-explain.mts",
-    "validate:frontend": "npm run typecheck:all && npm run test:frontend && npm run test:frontend-property && npm run test:frontend-fuzz && npm run test:parser && npm run test:text-source && npm run test:lexer && npm run check:diagnostic-coverage && npm run check:package-boundaries && npm run check:token-coverage && npm run check:lexical-grammar",
+    "validate:frontend": "npm run typecheck:all && npm run test:frontend && npm run test:frontend-property && npm run test:frontend-fuzz && npm run test:frontend-mutation && npm run test:frontend-security && npm run test:frontend-limits && npm run test:frontend-formatter-law && npm run test:parser && npm run test:text-source && npm run test:lexer && npm run check:diagnostic-coverage && npm run check:package-boundaries && npm run check:token-coverage && npm run check:lexical-grammar && npm run check:frontend-determinism",
     "check:lexer-limit-coverage": "node --experimental-strip-types scripts/check-lexer-limit-coverage.mts",
     "check:lexer-determinism": "node --experimental-strip-types scripts/check-lexer-determinism.mts",
     "check:package-basics": "node --experimental-strip-types scripts/check-package-basics.mts",
@@ -69,7 +69,12 @@
     "test:parser": "vitest --workspace=vitest.workspace.ts run packages/parser/test",
     "test:frontend": "vitest --workspace=vitest.workspace.ts run packages/frontend/test",
     "test:frontend-property": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/property.test.ts",
-    "test:frontend-fuzz": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/fuzz.test.ts"
+    "test:frontend-fuzz": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/fuzz.test.ts",
+    "test:frontend-mutation": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/mutation.test.ts",
+    "test:frontend-security": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/security.test.ts",
+    "test:frontend-limits": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/limits.test.ts",
+    "test:frontend-formatter-law": "vitest --workspace=vitest.workspace.ts run packages/frontend/test/formatter-law.test.ts",
+    "check:frontend-determinism": "node --experimental-strip-types scripts/check-frontend-determinism.mts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

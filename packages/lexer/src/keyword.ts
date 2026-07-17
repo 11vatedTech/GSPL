@@ -3,9 +3,25 @@
  * single authoritative `KEYWORD_KINDS`, `PUNCTUATION_KINDS`, and
  * `OPERATOR_KINDS` registries published by @gspl/syntax-tree.
  *
+ * Prompt 3 Final Closure §4 — code-point-aware scanning. Identifier
+ * classification uses the versioned profile (`isIdentifierStartChar` /
+ * `isIdentifierContinueChar`) from @gspl/text-source with the FULL Unicode
+ * scalar value (BMP or supplementary), never on isolated UTF-16 code units.
+ * The handwritten `U+00C0-24F` / `U+0300-36F` ranges previously present
+ * here have been removed; the profile is the single source of truth.
+ *
+ * Prompt 3 Final Closure §4 — supplementary-plane policy. The gspl-v1
+ * profile accepts a fixed set of BMP scripts (Latin ASCII, Latin extended,
+ * Greek, Cyrillic via `isIdentifierStartChar`/`isIdentifierContinueChar`).
+ * Code points above U+FFFF are rejected as
+ * `GSPL-LEX-SUPPLEMENTARY-IDENTIFIER` rather than split across surrogate
+ * pairs, by deliberate declared policy (final closure §4).
+ *
+ * Gap between BMP and supplementary: this is intentional. We do not split
+ * surrogate pairs and we do not silently drop supplementary code points.
+ *
  * Prompt 3 §3 / §6 / §13 — no prefix matching. Only the entire lexeme is
- * recognised as a reserved word or literal. These functions are pure, free of
- * global state, and reentrant.
+ * recognised as a reserved word or literal.
  */
 import {
   SyntaxKind,
@@ -13,19 +29,28 @@ import {
   PUNCTUATION_KINDS,
   OPERATOR_KINDS,
 } from '@gspl/syntax-tree';
+import { isIdentifierStartChar, isIdentifierContinueChar } from '@gspl/text-source';
 
 export interface IdentifierScanResult {
   readonly kind: SyntaxKind;
   readonly lexeme: string;
   readonly width: number;
-  /**
-   * True iff the scanned lexeme is recognised as a keyword or literal in
-   * `KEYWORD_KINDS` / `LITERAL_KINDS`. False means it is an identifier.
-   */
+  /** True iff the scanned lexeme is recognised as a keyword or literal. */
   readonly isKeyword: boolean;
+  /** True iff a supplementary-plane (U+10000+) code point was rejected. */
+  readonly rejectedSupplementary: boolean;
 }
 
-/** ASCII-only fast path: bypass Unicode classification for lexemes of ASCII letters, digits, underscores. */
+/* ASCII fast path predicates for the first character (start-of-identifier
+ * must not be a digit) and continuation characters. Profile-driven
+ * `isIdentifierStartChar` / `isIdentifierContinueChar` are used for the
+ * non-ASCII branch. */
+function isAsciiIdentStart(ch: number): boolean {
+  if (ch === 0x5F) return true;
+  if (ch >= 0x41 && ch <= 0x5A) return true;
+  if (ch >= 0x61 && ch <= 0x7A) return true;
+  return false;
+}
 function isAsciiIdentCont(ch: number): boolean {
   if (ch === 0x5F) return true;
   if (ch >= 0x41 && ch <= 0x5A) return true;
@@ -34,55 +59,114 @@ function isAsciiIdentCont(ch: number): boolean {
   return false;
 }
 
-/** Broad identifier-continue predicate covering Latin extended only; CJK/Greek/Cyrillic use text-source. */
-function isDefaultIdentCont(ch: number): boolean {
-  if (isAsciiIdentCont(ch)) return true;
-  // Latin extended
-  if (ch >= 0x00C0 && ch <= 0x024F) return true;
-  // Combining marks subset
-  if (ch >= 0x0300 && ch <= 0x036F) return true;
-  return false;
+/**
+ * Read the Unicode scalar value at `offset` and the UTF-16 width it
+ * occupies (1 for BMP, 2 for supplementary-plane). Unpaired surrogates
+ * are surfaced separately so the caller can decide.
+ */
+function readCodePoint(text: string, offset: number): { cp: number | undefined; width: number; unpairedSurrogate: boolean } {
+  if (offset >= text.length) return { cp: undefined, width: 0, unpairedSurrogate: false };
+  const cu = text.charCodeAt(offset);
+  if (cu >= 0xD800 && cu <= 0xDBFF) {
+    if (offset + 1 < text.length) {
+      const lo = text.charCodeAt(offset + 1);
+      if (lo >= 0xDC00 && lo <= 0xDFFF) {
+        return { cp: (cu - 0xD800) * 0x400 + (lo - 0xDC00) + 0x10000, width: 2, unpairedSurrogate: false };
+      }
+    }
+    return { cp: cu, width: 1, unpairedSurrogate: true };
+  }
+  if (cu >= 0xDC00 && cu <= 0xDFFF) {
+    return { cp: cu, width: 1, unpairedSurrogate: true };
+  }
+  return { cp: cu, width: 1, unpairedSurrogate: false };
 }
 
+/**
+ * Scan an identifier or keyword. The first character is read as either
+ * ASCII (fast path) or full code-point (delegated to the profile's
+ * `isIdentifierStartChar`). Continuation characters are similarly read
+ * code-point by code-point. Supplementary-plane code points are rejected
+ * inside the scan: the scan stops at the supplementary character and
+ * flags `rejectedSupplementary=true` so the lexer can emit a single
+ * structured diagnostic rather than silently splitting the surrogate
+ * pair or accepting the disallowed code point.
+ */
 export function scanIdentifierOrKeyword(
   text: string,
   start: number,
   maxLen: number,
 ): IdentifierScanResult {
   const length = text.length;
-  let fast = true;
-  let i = start + 1;
-  // ASCII fast path: stop at first non-ASCII identifier-continue.
-  while (i < length && i - start < maxLen) {
-    const ch = text.charCodeAt(i);
-    if (ch < 0x80) {
-      if (!isAsciiIdentCont(ch)) break;
-      i++;
-      continue;
+  if (start >= length) {
+    return { kind: SyntaxKind.Identifier, lexeme: '', width: 0, isKeyword: false, rejectedSupplementary: false };
+  }
+  let i: number;
+  let rejectedSupplementary = false;
+
+  /* Start character. */
+  if (start + 1 > length) return { kind: SyntaxKind.Identifier, lexeme: text.slice(start, start + 1), width: 1, isKeyword: false, rejectedSupplementary: false };
+  const firstCu = text.charCodeAt(start);
+  if (firstCu < 0x80) {
+    if (!isAsciiIdentStart(firstCu)) {
+      return { kind: SyntaxKind.Identifier, lexeme: text.slice(start, start + 1), width: 1, isKeyword: false, rejectedSupplementary: false };
     }
-    // First non-ASCII character — switch to broad predicate.
-    fast = false;
-    if (!isDefaultIdentCont(ch)) break;
-    if (ch >= 0xD800 && ch <= 0xDBFF) {
-      // surrogate pair: step two
-      if (i + 1 < length && text.charCodeAt(i + 1) >= 0xDC00 && text.charCodeAt(i + 1) <= 0xDFFF) {
-        i += 2;
-        continue;
-      }
-      // unpaired high surrogate: stop
+    i = start + 1;
+  } else {
+    const { cp, width, unpairedSurrogate } = readCodePoint(text, start);
+    if (cp === undefined) return { kind: SyntaxKind.Identifier, lexeme: '', width: 0, isKeyword: false, rejectedSupplementary: false };
+    if (unpairedSurrogate) {
+      // Don't form an identifier from an unpaired surrogate at all.
+      return { kind: SyntaxKind.Identifier, lexeme: text.slice(start, start + width), width, isKeyword: false, rejectedSupplementary: false };
+    }
+    if (cp > 0xFFFF) {
+      // Supplementary-plane code point rejected by gspl-v1 policy (§4).
+      // The issued identifier starts here with zero width; the lexer will
+      // observe `rejectedSupplementary=true` and emit the structured
+      // diagnostic against this exact position.
+      rejectedSupplementary = true;
+      i = start;
+    } else if (cp <= 0xFFFF && !isIdentifierStartChar(String.fromCodePoint(cp))) {
+      return { kind: SyntaxKind.Identifier, lexeme: text.slice(start, start + width), width, isKeyword: false, rejectedSupplementary: false };
+    } else {
+      i = start + width;
+    }
+  }
+
+  /* Continuation characters. */
+  while (i < length && i - start < maxLen) {
+    const widRead = readCodePoint(text, i);
+    if (widRead.cp === undefined) break;
+    if (widRead.unpairedSurrogate) break;
+    if (widRead.cp > 0xFFFF) {
+      rejectedSupplementary = true;
       break;
     }
-    i++;
+    const cp = widRead.cp;
+    const cpStr = String.fromCodePoint(cp);
+    if (cp < 0x80) {
+      if (!isAsciiIdentCont(cp)) break;
+      i += 1;
+      continue;
+    }
+    if (isIdentifierContinueChar(cpStr)) {
+      i += widRead.width;
+      continue;
+    }
+    break;
   }
-  void fast;
+
+  if (rejectedSupplementary) {
+    return { kind: SyntaxKind.Identifier, lexeme: text.slice(start, i), width: i - start, isKeyword: false, rejectedSupplementary: true };
+  }
+
   const lexeme = text.slice(start, i);
   const width = i - start;
-  // Exact (whole-lexeme) lookup — never match prefixes or substrings.
   const keywordKind = KEYWORD_KINDS.get(lexeme);
   if (keywordKind !== undefined) {
-    return { kind: keywordKind, lexeme, width, isKeyword: true };
+    return { kind: keywordKind, lexeme, width, isKeyword: true, rejectedSupplementary: false };
   }
-  return { kind: SyntaxKind.Identifier, lexeme, width, isKeyword: false };
+  return { kind: SyntaxKind.Identifier, lexeme, width, isKeyword: false, rejectedSupplementary: false };
 }
 
 export interface PunctOpResult {
@@ -114,13 +198,6 @@ export function scanPunctuationOrOperator(text: string, start: number): PunctOpR
 
 /**
  * Lookup helper kept for backward compatibility with downstream callers.
- * Returns the SyntaxKind for a stored kind name such as "KeywordSeed" or
- * "Range", or `SyntaxKind.Invalid` if unknown. (Used in non-hot paths.)
- *
- * Note: SyntaxKind is a const enum; circumventing the const-enum string
- * restriction by enumerating known names against the published syntax-tree
- * registries. This avoids forcing every caller to maintain string->kind
- * maps of their own.
  */
 import {
   KEYWORD_KINDS as _KEYWORD_KINDS,

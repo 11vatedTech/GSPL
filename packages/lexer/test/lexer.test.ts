@@ -46,26 +46,27 @@ describe('Lexer — numbers', () => {
   it('decimal integer as bigint', () => {
     const r = lexSource(doc('42'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.IntegerLiteral);
-    expect(r.tokens[0]!.semanticValue).toBe(42n);
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'integer', value: 42n });
   });
   it('hex integer', () => {
     const r = lexSource(doc('0xFF'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.IntegerLiteral);
-    expect(r.tokens[0]!.semanticValue).toBe(255n);
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'integer', value: 255n });
   });
   it('binary integer', () => {
     const r = lexSource(doc('0b101'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.IntegerLiteral);
-    expect(r.tokens[0]!.semanticValue).toBe(5n);
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'integer', value: 5n });
   });
   it('octal integer', () => {
     const r = lexSource(doc('0o17'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.IntegerLiteral);
-    expect(r.tokens[0]!.semanticValue).toBe(15n);
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'integer', value: 15n });
   });
   it('decimal float', () => {
     const r = lexSource(doc('3.14'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.FloatLiteral);
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'decimal-float', value: '3.14' });
   });
   it('float with exponent', () => {
     const r = lexSource(doc('1.5e10'));
@@ -74,7 +75,7 @@ describe('Lexer — numbers', () => {
   it('digit separator', () => {
     const r = lexSource(doc('1_000_000'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.IntegerLiteral);
-    expect(r.tokens[0]!.semanticValue).toBe(1000000n);
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'integer', value: 1000000n });
   });
 });
 
@@ -82,21 +83,21 @@ describe('Lexer — strings', () => {
   it('escaped string with basic escapes', () => {
     const r = lexSource(doc('"hello\\nworld"'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.StringLiteral);
-    expect(r.tokens[0]!.semanticValue).toBe('hello\nworld');
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'string', value: 'hello\nworld' });
   });
   it('escaped string with unicode', () => {
     const r = lexSource(doc('"\\u00e9"'));
-    expect(r.tokens[0]!.semanticValue).toBe(String.fromCharCode(0xe9));
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'string', value: String.fromCharCode(0xe9) });
   });
   it('raw string', () => {
     const r = lexSource(doc('r"raw\\nstring"'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.RawStringLiteral);
-    expect(r.tokens[0]!.semanticValue).toBe('raw\\nstring');
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'string', value: 'raw\\nstring' });
   });
   it('multiline string', () => {
     const r = lexSource(doc('"""multi\nline"""'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.MultilineStringLiteral);
-    expect(r.tokens[0]!.semanticValue).toBe('multi\nline');
+    expect(r.tokens[0]!.semanticValue).toEqual({ kind: 'string', value: 'multi\nline' });
   });
   it('unterminated string is Invalid', () => {
     const r = lexSource(doc('"unterminated'));
@@ -343,7 +344,172 @@ describe('Lexer — property-level ownership (Prompt 3 Integrity Repair §8)', (
   });
 });
 
-describe('Lexer — §10 regression tests', () => {
+describe('Lexer — multiline block comment ownership (Prompt 3 Final Closure §2-§3)', () => {
+  /* §2 normative policy, verbatim from the directive:
+   *   - Same-line spaces, tabs, line comments, and line-free block
+   *     comments at EOF belong to the preceding token's trailing trivia.
+   *   - A block comment WITH a line terminator leads the following token
+   *     (or leads EOF if no next token exists).
+   *   - Same-line whitespace preceding a multiline block comment REMAINS
+   *     trailing trivia of the previous token.
+   */
+
+  it('§3 — same-line block comment still trails previous token', () => {
+    const r = lexSource(doc('a /* one line */ b'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' /* one line */ ');
+    expect(r.tokens[1]!.leadingTrivia).toHaveLength(0);
+  });
+  it('§3 — same-line block at EOF belongs to previous token; no EOF leading', () => {
+    const r = lexSource(doc('a /* block */'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' /* block */');
+    const eof = r.tokens[r.tokens.length - 1]!;
+    expect(eof.leadingTrivia).toHaveLength(0);
+  });
+
+  it('§3 — multiline block: same-line space before REMAINS trailing of "a"; block itself leads "b"', () => {
+    const r = lexSource(doc('a /* first\nsecond */ b'));
+    /* The space between 'a' and '/*' is same-line trailing of 'a' (§2). */
+    expect(r.tokens[0]!.greenToken.text).toBe('a');
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' ');
+    /* The block (containing the terminator) leads 'b'. */
+    expect(r.tokens[1]!.greenToken.text).toBe('b');
+    const leadText = r.tokens[1]!.leadingTrivia.map((t) => t.text).join('');
+    expect(leadText).toContain('/* first');
+    expect(leadText).toContain('second */');
+  });
+  it('§3 — multiline block at EOF: same-line space stays trailing of "a"; block leads EOF', () => {
+    const r = lexSource(doc('a /* first\nsecond */'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' ');
+    const eof = r.tokens[r.tokens.length - 1]!;
+    expect(eof.greenToken.kind).toBe(SyntaxKind.EndOfFile);
+    const leadText = eof.leadingTrivia.map((t) => t.text).join('');
+    expect(leadText).toContain('/* first');
+    expect(leadText).toContain('second */');
+  });
+
+  it('§3 — whitespace after multiline comment trails through to the next token when no preceding token', () => {
+    /* Source: '/* one LF two star-slash' followed by 3 spaces then b.
+     * Six leading chars (block + 3 spaces).
+     * No preceding token, so the entire prelude leads b. */
+    const r = lexSource(doc('/* one\ntwo */   b'));
+    const leadText = r.tokens[0]!.leadingTrivia.map((t) => t.text).join('');
+    expect(leadText).toContain('/* one');
+    expect(leadText).toContain('two */');
+    expect(leadText).toContain('   ');
+  });
+
+  it('§3 — nested multiline block comment preserves ownership (outer leading)', () => {
+    const source = doc('a /* outer\n/* inner */\nouter */ b');
+    const r = lexSource(source);
+    expect(r.tokens[0]!.greenToken.text).toBe('a');
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' ');
+    expect(r.tokens[1]!.greenToken.text).toBe('b');
+    expect(r.tokens[1]!.leadingTrivia.length).toBeGreaterThan(0);
+    expect(validateOwnership(source, r.tokens).ok).toBe(true);
+  });
+
+  it('§3 — CRLF inside block comment makes it multiline (leading)', () => {
+    const r = lexSource(doc('a /* x\r\ny */ b'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' ');
+    const leadText = r.tokens[1]!.leadingTrivia.map((t) => t.text).join('');
+    expect(leadText).toContain('/* x\r\ny */');
+  });
+  it('§3 — bare CR inside block comment makes it multiline (leading)', () => {
+    const r = lexSource(doc('a /* x\ry */ b'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' ');
+    expect(r.tokens[1]!.leadingTrivia.length).toBeGreaterThan(0);
+  });
+  it('§3 — U+2028 inside block comment makes it multiline (leading)', () => {
+    const r = lexSource(doc('a /* x\u2028y */ b'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' ');
+    expect(r.tokens[1]!.leadingTrivia.length).toBeGreaterThan(0);
+  });
+  it('§3 — U+2029 inside block comment makes it multiline (leading)', () => {
+    const r = lexSource(doc('a /* x\u2029y */ b'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' ');
+    expect(r.tokens[1]!.leadingTrivia.length).toBeGreaterThan(0);
+  });
+
+  it('§3 — unterminated multiline block comment still preserves full source through EOF', () => {
+    const source = doc('a /* never\nclosed');
+    const r = lexSource(source);
+    expect(r.diagnostics.some((d) => d.code === 'GSPL-LEX-UNTERMINATED-BLOCK-COMMENT')).toBe(true);
+    expect(validateOwnership(source, r.tokens).ok).toBe(true);
+  });
+
+  it('§3 — multiline documentation block comment ALWAYS leads the following declaration', () => {
+    const r = lexSource(doc('/** doc\nline */\ngene a'));
+    expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.KeywordGene);
+    expect(r.tokens[0]!.leadingTrivia.length).toBeGreaterThan(0);
+    const leadText = r.tokens[0]!.leadingTrivia.map((t) => t.text).join('');
+    expect(leadText).toContain('/** doc');
+  });
+  it('§3 — multiline documentation block at EOF leads EOF (space before still trails "a")', () => {
+    const r = lexSource(doc('a /** doc\nline */'));
+    expect(r.tokens[0]!.trailingTrivia.map((t) => t.text).join('')).toBe(' ');
+    const eof = r.tokens[r.tokens.length - 1]!;
+    expect(eof.leadingTrivia.length).toBeGreaterThan(0);
+    const leadText = eof.leadingTrivia.map((t) => t.text).join('');
+    expect(leadText).toContain('/** doc');
+  });
+});
+
+describe('Lexer — code-point identifier scanning (Prompt 3 Final Closure §4-§5)', () => {
+  it('§4 — non-ASCII BMP Latin identifier is recognized as Identifier', () => {
+    const r = lexSource(doc('caf\u00e9'));
+    expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.Identifier);
+    expect(r.tokens[0]!.greenToken.text).toBe('caf\u00e9');
+  });
+  it('§4 — precomposed and decomposed Latin equivalent are distinct lexemes', () => {
+    const r1 = lexSource(doc('caf\u00e9'));
+    const r2 = lexSource(doc('cafe\u0301'));
+    expect(r1.tokens[0]!.greenToken.text).toBe('caf\u00e9');
+    expect(r2.tokens[0]!.greenToken.text).toBe('cafe\u0301');
+    expect(r1.tokens[0]!.greenToken.text).not.toEqual(r2.tokens[0]!.greenToken.text);
+  });
+  it('§5 — non-ASCII identifier carries IdentifierLexicalValue metadata', () => {
+    const r = lexSource(doc('playerHealth'));
+    const sem = r.tokens[0]!.semanticValue;
+    expect(sem).toBeUndefined(); /* ASCII fast path. */
+  });
+  it('§5 — Latin-extended identifier carries IdentifierLexicalValue metadata', () => {
+    const r = lexSource(doc('caf\u00e9'));
+    const sem = r.tokens[0]!.semanticValue;
+    expect(sem).toBeDefined();
+    expect((sem as any).kind).toBe('identifier');
+    expect((sem as any).identity.normalized).toBe('caf\u00e9');
+    expect((sem as any).identity.original).toBe('caf\u00e9');
+  });
+  it('§4 — supplementary-plane code point rejected with structured diagnostic', () => {
+    // U+1F600 GRINNING FACE (smile emoji) supplementary plane.
+    const source = doc('a\uD83D\uDE00b');
+    const r = lexSource(source);
+    expect(r.diagnostics.some((d) => d.code === 'GSPL-LEX-SUPPLEMENTARY-IDENTIFIER')).toBe(true);
+  });
+});
+
+describe('Lexer — aggregate trivia limit (Prompt 3 Final Closure §6-§7)', () => {
+  it('§7 — exceeds maxTriviaCodeUnits emits GSPL-LEX-TRIVIA-TOO-LARGE once', () => {
+    const sourceText = '   '.repeat(70000); // 210k whitespace code units > default 1MB/var but >small
+    const r = lexSource(doc(sourceText), { limits: { ...DEFAULT_SOURCE_LIMITS, maxTriviaCodeUnits: 1024 } });
+    expect(r.diagnostics.some((d) => d.code === 'GSPL-LEX-TRIVIA-TOO-LARGE')).toBe(true);
+  });
+  it('§7 — over-limit case marks complete=false', () => {
+    const r = lexSource(doc('   seed'.repeat(500)), { limits: { ...DEFAULT_SOURCE_LIMITS, maxTriviaCodeUnits: 1024 } });
+    expect(r.complete).toBe(false);
+  });
+  it('§7 — over-limit case records skippedTriviaCodeUnits', () => {
+    const r = lexSource(doc('   seed'.repeat(500)), { limits: { ...DEFAULT_SOURCE_LIMITS, maxTriviaCodeUnits: 1024 } });
+    expect(r.statistics.skippedTriviaCodeUnits).toBeGreaterThan(0);
+  });
+  it('§6 — within-limit case never emits GSPL-LEX-TRIVIA-TOO-LARGE and completes', () => {
+    const r = lexSource(doc('a b c'));
+    expect(r.diagnostics.some((d) => d.code === 'GSPL-LEX-TRIVIA-TOO-LARGE')).toBe(false);
+    expect(r.complete).toBe(true);
+  });
+});
+
+describe('Lexer — §10 regression tests (Prompt 3 Final Closure §10)', () => {
   it('trueValue remains one identifier (prefix-split protection)', () => {
     const r = lexSource(doc('trueValue'));
     expect(r.tokens[0]!.greenToken.kind).toBe(SyntaxKind.Identifier);

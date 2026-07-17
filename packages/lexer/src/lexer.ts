@@ -1,49 +1,41 @@
 /**
- * Main lexer. Prompt 3 Lexer Integrity Repair.
+ * Main lexer. Prompt 3 Final Lexer Closure.
  *
- * Two-phase architecture (Prompt 3 Lexer Integrity Repair §5):
- *   Phase A — mutable construction:
- *     - One MutableTokenBuilder per emitted token, accumulated in `builders`.
- *     - Trivia routes directly: post-newline → `pendingLeading`; same-line →
- *       `currentToken.trailingTrivia`; pre-first-token → `pendingLeading`.
- *     - No pending-trivia state variable; no mutations to already-finalized
- *       tokens.
- *   Phase B — immutable publication:
- *     - After the source is exhausted, walk `builders` and produce a
- *       readonly `Token[]`. Each trivia array is spread to a fresh array
- *       and `Object.freeze`d so no caller can mutate it.
+ * Two-phase architecture (Prompt 3 Lexer Integrity Repair §5 — retained).
  *
- * EOF ownership (Prompt 3 Lexer Integrity Repair §6):
- *   - Same-line spaces/tabs/line-comments/line-free-block-comments at EOF
- *     belong to the preceding token's `trailingTrivia`.
- *   - Post-newline trivia at EOF belongs to `EOF.leadingTrivia`.
- *   - A file containing only trivia makes that trivia `EOF.leadingTrivia`.
- *   - The published EOF is just the last MutableTokenBuilder in the list.
+ * Multiline-comment ownership (Prompt 3 Final Closure §2):
+ *   - Block comment OWNERSHIP is decided by whether the trivia's lexeme
+ *     contains a supported line terminator (LF/CRLF/CR/U+2028/U+2029),
+ *     not by the token-relative `seenNewline` flag at scan time.
+ *   - Documentation comments ALWAYS lead the following token.
+ *   - Otherwise the existing `seenNewline` rule applies.
  *
- * Trivia ownership (Prompt 3 §3 / §6):
- *   - BOM is the first token's leading trivia.
- *   - Newline forms (LF, CRLF, CR, U+2028, U+2029) are line terminators and
- *     belong to the next token's leading trivia (or to EOF if no next token
- *     exists).
+ * Trivia ordering invariant: `seenNewline` MUST be set to true before
+ * `appendTrivia` is called, so that the existing line-terminator routing
+ * rule (post-newline → `pendingLeading`) still triggers correctly for
+ * pure whitespace newline forms. (Earlier draft had this in the wrong
+ * order and broke §10 regression tests.)
  *
- * Identifier Unicode security (Prompt 3 §4 / §11): every identifier is
- * analysed through @gspl/text-source analyzeIdentifier. Plain-ASCII letters
- * take an ASCII fast path that produces no warnings.
+ * Code-point-aware identifier scanning (Prompt 3 Final Closure §4):
+ *   - The main loop dispatcher `isIdentStartCharCode(cp)` accepts either
+ *     ASCII letters or non-ASCII code points whose full scalar value
+ *     passes the versioned profile (`isIdentifierStartChar`).
+ *   - Supplementary-plane (U+10000+) code points emit
+ *     `GSPL-LEX-SUPPLEMENTARY-IDENTIFIER`.
  *
- * Keyword / literal boundary recognition (Prompt 3 §3 / §6): single
- * authoritative `lookupKeywordOrLiteral` against the language profile.
+ * Identifier metadata (Prompt 3 Final Closure §5): every identifier that
+ * contains a non-ASCII code point carries an `IdentifierLexicalValue`.
  *
- * Diagnostic limit (Prompt 3 Integrity Repair §12): every diagnostic
- * emission is funnelled through `pushDiagSafe`. When the configured
- * `maxDiagnostics` ceiling is reached, the FINAL remaining slot is reserved
- * for `GSPL-LEX-DIAGNOSTIC-LIMIT` — all subsequent emissions are discarded
- * deterministically. This makes `maxDiagnostics = 1` emit exactly one
- * `GSPL-LEX-DIAGNOSTIC-LIMIT` diagnostic.
+ * maxTriviaCodeUnits (Prompt 3 Final Closure §6-§7): once the configured
+ * aggregate trivia ceiling is exceeded, the lexer emits one
+ * `GSPL-LEX-TRIVIA-TOO-LARGE` diagnostic and stops materializing new
+ * trivia GreenTrivia objects (offsets still advance; skipped byte count
+ * is reported via `skippedTriviaCodeUnits`).
  */
-import type { SourceDocument, SourceLimits, Diagnostic, SourceId, DiagnosticSeverity } from '@gspl/text-source';
+import type { SourceDocument, SourceLimits, Diagnostic, SourceId, DiagnosticSeverity, IdentifierIdentity, UnicodeSecurityCode } from '@gspl/text-source';
 import { DEFAULT_SOURCE_LIMITS, makeDiagnostic, analyzeIdentifier, isIdentifierStartChar } from '@gspl/text-source';
 import { SyntaxKind, GreenToken, GreenTrivia, isKeyword, isTrivia } from '@gspl/syntax-tree';
-import type { Token, LexResult, LexerStatistics, LexerOperationalMetrics, SemanticValue } from './token.js';
+import type { Token, LexResult, LexerStatistics, LexerOperationalMetrics, SemanticValue, IdentifierLexicalValue } from './token.js';
 import { scanNumericLiteral } from './lex-numeric.js';
 import { scanStringLiteral } from './lex-string.js';
 import { scanLineComment, scanBlockComment, scanWhitespace } from './lex-comment.js';
@@ -56,10 +48,6 @@ export interface LexerOptions {
   readonly nestedBlockComments?: boolean;
 }
 
-/**
- * MutableTokenBuilder — Phase A internal struct. The published Token never
- * shares a reference with this struct.
- */
 export interface MutableTokenBuilder {
   readonly kind: SyntaxKind;
   readonly text: string;
@@ -79,11 +67,14 @@ export function lexSource(source: SourceDocument, options: LexerOptions = {}): L
   const diagnostics: Diagnostic[] = [];
   const builders: MutableTokenBuilder[] = [];
 
-  // --- Phase A state ---
   let currentToken: MutableTokenBuilder | undefined = undefined;
   let pendingLeading: GreenTrivia[] = [];
   let seenNewline = false;
   let offset = 0;
+
+  let triviaTotalCodeUnits = 0;
+  let triviaLimitExceeded = false;
+  let skippedTriviaCodeUnits = 0;
 
   const versionHint = options.languageVersion ?? 'gspl-text/1.0';
   const resolved = resolveLanguageProfile(versionHint, limits);
@@ -94,10 +85,37 @@ export function lexSource(source: SourceDocument, options: LexerOptions = {}): L
 
   if (source.hadBom) {
     pendingLeading.push(GreenTrivia.fromText(SyntaxKind.ByteOrderMarkTrivia, String.fromCharCode(0xFEFF)));
+    triviaTotalCodeUnits += 1;
   }
 
-  function appendTrivia(trivia: readonly GreenTrivia[]): void {
+  /**
+   * Route trivia produced by a scanner. Documentation comments ALWAYS
+   * lead. Multiline block comments (those whose lexeme contains a line
+   * terminator) lead. Otherwise the existing `seenNewline` rule applies.
+   *
+   * `skipped=true` honours the trivia aggregate ceiling: we DO NOT append
+   * the trivia but we still update `skippedTriviaCodeUnits` so property
+   * tests can detect over-limit cases. The caller still owns offset
+   * advancement.
+   */
+  function appendTrivia(
+    trivia: readonly GreenTrivia[],
+    containsLineTerminator: boolean,
+    skipped: boolean,
+  ): void {
+    if (skipped) {
+      for (const tr of trivia) skippedTriviaCodeUnits += tr.width;
+      return;
+    }
     for (const tr of trivia) {
+      if (tr.kind === SyntaxKind.DocumentationCommentTrivia) {
+        pendingLeading.push(tr);
+        continue;
+      }
+      if (tr.kind === SyntaxKind.BlockCommentTrivia && containsLineTerminator) {
+        pendingLeading.push(tr);
+        continue;
+      }
       if (seenNewline) {
         pendingLeading.push(tr);
       } else if (currentToken !== undefined) {
@@ -106,9 +124,19 @@ export function lexSource(source: SourceDocument, options: LexerOptions = {}): L
         pendingLeading.push(tr);
       }
     }
+    for (const tr of trivia) triviaTotalCodeUnits += tr.width;
+    /* Trivia aggregate ceiling gate (Prompt 3 Final Closure §6-§7).
+     * Located inside `appendTrivia` so greedy single-call scans still
+     * trip it. Fires once the first time triviaTotalCodeUnits exceeds
+     * the configured max. From then on every subsequent
+     * `appendTrivia(...)` is routed through its `skipped=true` branch. */
+    if (!triviaLimitExceeded && triviaTotalCodeUnits > limits.maxTriviaCodeUnits) {
+      triviaLimitExceeded = true;
+      pushDiagSafe(diagnostics, limits, 'GSPL-LEX-TRIVIA-TOO-LARGE', 'aggregate trivia exceeds maxTriviaCodeUnits: ' + triviaTotalCodeUnits + ' > ' + limits.maxTriviaCodeUnits, 'error', source.id, offset, offset);
+    }
   }
 
-  function emit(kind: SyntaxKind, startOff: number, endOff: number, lexeme: string, semanticValue?: SemanticValue): void {
+  function emitToken(kind: SyntaxKind, startOff: number, endOff: number, lexeme: string, semanticValue?: SemanticValue): void {
     if (builders.length >= limits.maxTokenCount) {
       pushDiagSafe(diagnostics, limits, 'GSPL-LEX-TOKEN-LIMIT', 'maxTokenCount exceeded', 'error', source.id, offset, offset);
       return;
@@ -134,111 +162,128 @@ export function lexSource(source: SourceDocument, options: LexerOptions = {}): L
       break;
     }
     if (diagnostics.length >= limits.maxDiagnostics) break;
+    /* Trivia-limit gate moved INSIDE `appendTrivia` after triviaTotalCodeUnits
+     * is updated — this catches greedy single-call scans (e.g.
+     * `scanWhitespace(includeNewline=false)` over a long run of plain
+     * spaces) that would otherwise consume the entire source in one
+     * iteration and skip the gate entirely. */
     const startOffset = offset;
     const cp = text.charCodeAt(offset);
-    // Whitespace (not newline)
+
+    /* Whitespace (not newline) */
     if (cp === 0x20 || cp === 0x09 || cp === 0x0B || cp === 0x0C) {
       const r = scanWhitespace(text, offset, false);
-      appendTrivia(r.trivia);
+      appendTrivia(r.trivia, false, triviaLimitExceeded);
       offset = r.nextOffset > startOffset ? r.nextOffset : startOffset + 1;
       continue;
     }
-    // Newline forms (LF, CRLF, CR, U+2028, U+2029) — line terminator → leads next token.
+    /* Newline forms — line terminator → leads next token. */
     if (cp === 0x0A || cp === 0x0D || cp === 0x2028 || cp === 0x2029) {
       const r = scanWhitespace(text, offset, true);
-      seenNewline = true;
-      appendTrivia(r.trivia);
+      seenNewline = true; /* SET FIRST so appendTrivia routes to pendingLeading. */
+      appendTrivia(r.trivia, r.containsLineTerminator, triviaLimitExceeded);
       offset = r.nextOffset > startOffset ? r.nextOffset : startOffset + 1;
       continue;
     }
-    // Line comment
+    /* Line comment */
     if (cp === 0x2F && text.charCodeAt(offset + 1) === 0x2F) {
       const r = scanLineComment(text, offset, { sourceId: source.id, maxCommentCodeUnits: limits.maxCommentCodeUnits });
       for (const d of r.diagnostics) pushDiagByValue(diagnostics, limits, d);
-      appendTrivia(r.trivia);
+      if (r.containsLineTerminator) seenNewline = true;
+      appendTrivia(r.trivia, false, triviaLimitExceeded);
       offset = r.nextOffset > startOffset ? r.nextOffset : startOffset + 1;
       continue;
     }
-    // Block comment
+    /* Block comment */
     if (cp === 0x2F && text.charCodeAt(offset + 1) === 0x2A) {
       const r = scanBlockComment(text, offset, {
         sourceId: source.id,
         limits,
         allowNestedBlockComments: nested && profile.allowNestedBlockComments !== false,
-        maxCommentNestingDepth: profile.maxCommentNestingDepth || 64,
+        maxCommentNestingDepth: profile.maxCommentNestingDepth || limits.maxCommentNestingDepth,
       });
       for (const d of r.diagnostics) pushDiagByValue(diagnostics, limits, d);
-      appendTrivia(r.trivia);
+      if (r.containsLineTerminator) seenNewline = true;
+      appendTrivia(r.trivia, r.containsLineTerminator, triviaLimitExceeded);
       offset = r.nextOffset > startOffset ? r.nextOffset : startOffset + 1;
       continue;
     }
-    // Numeric literal
+    /* Numeric literal */
     if (cp >= 0x30 && cp <= 0x39) {
       const result = scanNumericLiteral(text, offset, { sourceId: source.id, maxNumericCodeUnits: limits.maxNumericCodeUnits });
       for (const d of result.diagnostics) pushDiagByValue(diagnostics, limits, d);
-      emit(result.kind, startOffset, startOffset + result.width, result.text, result.kind === SyntaxKind.Invalid ? undefined : result.semanticValue);
+      const semValid = result.kind !== SyntaxKind.Invalid;
+      let sem: SemanticValue | undefined;
+      if (semValid) {
+        if (typeof result.semanticValue === 'bigint') sem = { kind: 'integer', value: result.semanticValue };
+        else if (typeof result.semanticValue === 'string') sem = { kind: 'decimal-float', value: result.semanticValue };
+      }
+      emitToken(result.kind, startOffset, startOffset + result.width, result.text, sem);
       offset = startOffset + result.width > startOffset ? startOffset + result.width : startOffset + 1;
       continue;
     }
-    // String literal (including raw `r"..."` form).
+    /* String literal */
     if (cp === 0x22 || (cp === 0x72 && text.charCodeAt(offset + 1) === 0x22)) {
       const result = scanStringLiteral(text, offset, { sourceId: source.id, maxStringCodeUnits: limits.maxStringCodeUnits });
       for (const d of result.diagnostics) pushDiagByValue(diagnostics, limits, d);
       const semValid = result.kind !== SyntaxKind.Invalid;
-      emit(result.kind, startOffset, startOffset + result.width, result.text, semValid ? result.semanticValue : undefined);
+      const sem: SemanticValue | undefined = semValid && typeof result.semanticValue === 'string'
+        ? { kind: 'string', value: result.semanticValue }
+        : undefined;
+      emitToken(result.kind, startOffset, startOffset + result.width, result.text, sem);
       offset = startOffset + result.width > startOffset ? startOffset + result.width : startOffset + 1;
       continue;
     }
-    // Identifier / keyword / literal
+    /* Identifier / keyword / literal */
     if (isIdentStartCharCode(cp)) {
       const idResult = scanIdentifierOrKeyword(text, offset, limits.maxIdentifierCodeUnits);
       const lexeme = idResult.lexeme;
+      if (idResult.rejectedSupplementary && lexeme.length > 0) {
+        pushDiagSafe(diagnostics, limits, 'GSPL-LEX-SUPPLEMENTARY-IDENTIFIER', 'supplementary-plane identifier code point rejected by gspl-v1 profile', 'error', source.id, startOffset + lexeme.length, startOffset + lexeme.length + 2);
+      }
+      let semantic: SemanticValue | undefined;
       if (!isPureAscii(lexeme) && lexeme.length > 0) {
-        const idAnalysis = analyzeIdentifier(lexeme);
+        const idAnalysis: IdentifierIdentity = analyzeIdentifier(lexeme);
+        const findings = idAnalysis.findings.map((f) => ({ code: f.code as UnicodeSecurityCode, message: f.message }));
         for (const f of idAnalysis.findings) {
           pushDiagSafe(diagnostics, limits, f.code, f.message ?? f.code, 'warning', source.id, startOffset + (f.offset ?? 0), startOffset + (f.offset ?? 0) + 1);
         }
+        const value: IdentifierLexicalValue = { kind: 'identifier', identity: idAnalysis, findings };
+        semantic = value;
       }
-      const lookup = lookupKeywordOrLiteral(lexeme, profile);
-      let finalKind: SyntaxKind = SyntaxKind.Identifier;
-      let semantic: SemanticValue | undefined;
-      if (lookup) {
-        finalKind = lookup.kind;
-        if (lookup.category === 'literal') {
-          if (lexeme === 'true') semantic = true;
-          else if (lexeme === 'false') semantic = false;
-          else semantic = null;
+      if (!semantic) {
+        const lookup = lookupKeywordOrLiteral(lexeme, profile);
+        if (lookup && lookup.category === 'literal') {
+          if (lexeme === 'true') semantic = { kind: 'boolean', value: true };
+          else if (lexeme === 'false') semantic = { kind: 'boolean', value: false };
+          else semantic = { kind: 'absence' };
         }
       }
-      emit(finalKind, startOffset, startOffset + idResult.width, lexeme, semantic);
+      emitToken(idResult.kind, startOffset, startOffset + idResult.width, lexeme, semantic);
       offset = startOffset + idResult.width > startOffset ? startOffset + idResult.width : startOffset + 1;
       continue;
     }
-    // Punctuation / operator
+    /* Punctuation / operator */
     if (isPunctOrOpStart(cp)) {
       const r = scanPunctuationOrOperator(text, offset);
       const lexeme = text.slice(startOffset, startOffset + r.width);
-      emit(r.kind, startOffset, startOffset + r.width, lexeme);
+      emitToken(r.kind, startOffset, startOffset + r.width, lexeme);
       offset = startOffset + r.width > startOffset ? startOffset + r.width : startOffset + 1;
       continue;
     }
-    // Unrecognised byte/character — single Invalid token, one diagnostic.
+    /* Unrecognised character */
     pushDiagSafe(diagnostics, limits, 'GSPL-LEX-INVALID-CHARACTER', 'unrecognized character: U+' + cp.toString(16).toUpperCase(), 'error', source.id, startOffset, startOffset + 1);
-    emit(SyntaxKind.Invalid, startOffset, startOffset + 1, text[offset] ?? '');
+    emitToken(SyntaxKind.Invalid, startOffset, startOffset + 1, text[offset] ?? '');
     offset = startOffset + 1;
   }
 
-  // EOF — Phase A emit. Its `leadingTrivia` receives whatever pending
-  // leading trivia was left unowned by the loop. Phase B will freeze it.
-  emit(SyntaxKind.EndOfFile, offset, offset, '');
+  /* Final token. Mid-loop gate above already emitted
+   * GSPL-LEX-TRIVIA-TOO-LARGE on the first over-limit iteration. */
+  emitToken(SyntaxKind.EndOfFile, offset, offset, '');
 
-  // --- Phase B: validate ownership-freeze and produce readonly Token[] ---
   const tokens = finalizePhaseB(builders, source.id);
 
   diagnostics.sort((a, b) => {
-    // Prompt 3 Lexer Integrity Repair §12: primary = source logical identity
-    // (single source per LexResult); then start offset; then end offset; then
-    // severity rank (error < warning < info < hint); then code; then message.
     if (a.span.start !== b.span.start) return a.span.start - b.span.start;
     if (a.span.end !== b.span.end) return a.span.end - b.span.end;
     const sa = severityRank(a.severity);
@@ -251,23 +296,17 @@ export function lexSource(source: SourceDocument, options: LexerOptions = {}): L
   const startT = (typeof performance !== 'undefined' ? performance.now() : Date.now());
   const elapsed = (typeof performance !== 'undefined' ? performance.now() : Date.now()) - startT;
   const operational: LexerOperationalMetrics = { elapsedMs: elapsed };
+  const stats = computeStats(tokens, diagnostics, source.lineCount, skippedTriviaCodeUnits);
   return {
     source,
     tokens,
     diagnostics,
-    statistics: computeStats(tokens, diagnostics, source.lineCount),
+    statistics: stats,
     operational,
-    complete: offset >= length,
+    complete: offset >= length && !triviaLimitExceeded,
   };
 }
 
-/**
- * Phase B — freeze the builder list into a readonly Token stream.
- * Each trivia array is copied to fresh storage and `Object.freeze`d.
- * The outer array is also frozen. The published `Token` never shares a
- * reference with any `MutableTokenBuilder` or any other public token's
- * trivia collection.
- */
 function finalizePhaseB(builders: readonly MutableTokenBuilder[], sourceId: SourceId): readonly Token[] {
   const tokens: Token[] = builders.map((b) => ({
     greenToken: GreenToken.fromText(b.kind, b.text),
@@ -279,12 +318,6 @@ function finalizePhaseB(builders: readonly MutableTokenBuilder[], sourceId: Sour
   return Object.freeze(tokens);
 }
 
-/**
- * Diagnostic emitter. Reserves the final remaining slot for
- * `GSPL-LEX-DIAGNOSTIC-LIMIT` so callers never bypass the configured limit.
- * `maxDiagnostics = 1` produces exactly one `GSPL-LEX-DIAGNOSTIC-LIMIT` and
- * discards everything else deterministically.
- */
 function pushDiagSafe(
   diagnostics: Diagnostic[],
   limits: SourceLimits,
@@ -304,9 +337,7 @@ function pushDiagSafe(
       message: `Diagnostic emission capped at maxDiagnostics limit of ${max}`,
       severity: 'warning',
       span: { sourceId, start, end },
-      category: 'lex',
-      phase: 'lex',
-      canonical: true,
+      category: 'lex', phase: 'lex', canonical: true,
     }));
     return;
   }
@@ -319,17 +350,30 @@ function pushDiagByValue(diagnostics: Diagnostic[], limits: SourceLimits, d: Dia
   pushDiagSafe(diagnostics, limits, d.code, d.message, d.severity, d.span.sourceId, d.span.start, d.span.end);
 }
 
+/**
+ * Main-loop dispatcher: should we try to scan this character as an
+ * identifier start? Returns true for ASCII letters/underscore OR for any
+ * non-ASCII code point whose Unicode scalar value passes the versioned
+ * profile OR for either surrogate half (so the scanner can validate the
+ * full pair and reject unpaired halves). Identifiers are then scanned by
+ * `scanIdentifierOrKeyword`, which is code-point-aware and either accepts
+ * or rejects supplementary characters.
+ */
 function isIdentStartCharCode(ch: number): boolean {
-  // Profile-driven identifier recognition (§11). ASCII letters and underscore
-  // are accepted by `isIdentifierStartChar` as well as accented Latin, Greek,
-  // Cyrillic, CJK, etc., per the versioned Unicode profile. No handwritten
-  // ranges.
+  if (ch < 0x80) {
+    /* ASCII fast path: letter or underscore only. */
+    if (ch === 0x5F) return true;
+    if (ch >= 0x41 && ch <= 0x5A) return true;
+    if (ch >= 0x61 && ch <= 0x7A) return true;
+    return false;
+  }
+  /* Both halves route into the identifier scanner so it can perform
+   * surrogate-pair detection and supplementary-plane rejection. */
+  if (ch >= 0xD800 && ch <= 0xDFFF) return true;
   return isIdentifierStartChar(String.fromCharCode(ch));
 }
 
 function severityRank(s: DiagnosticSeverity): number {
-  // DiagnosticSeverity = 'error' | 'warning' | 'info'. Rank errors first,
-  // then warnings, then info. Anything unknown sorts last.
   switch (s) {
     case 'error': return 0;
     case 'warning': return 1;
@@ -348,7 +392,7 @@ function isPureAscii(s: string): boolean {
   return true;
 }
 
-function computeStats(tokens: readonly Token[], diagnostics: readonly Diagnostic[], lineCount: number): LexerStatistics {
+function computeStats(tokens: readonly Token[], diagnostics: readonly Diagnostic[], lineCount: number, skippedTriviaCodeUnits: number): LexerStatistics {
   let triviaCount = 0;
   let identCount = 0;
   let literalCount = 0;
@@ -378,11 +422,15 @@ function computeStats(tokens: readonly Token[], diagnostics: readonly Diagnostic
     for (const tr of t.leadingTrivia) {
       if (isTrivia(tr.kind) && (tr.kind === SyntaxKind.LineCommentTrivia || tr.kind === SyntaxKind.BlockCommentTrivia || tr.kind === SyntaxKind.DocumentationCommentTrivia)) commentCount++;
     }
+    for (const tr of t.trailingTrivia) {
+      if (isTrivia(tr.kind) && (tr.kind === SyntaxKind.LineCommentTrivia || tr.kind === SyntaxKind.BlockCommentTrivia || tr.kind === SyntaxKind.DocumentationCommentTrivia)) commentCount++;
+    }
   }
   return {
     tokenCount: tokens.length, triviaCount, diagnosticCount: diagnostics.length,
     identifierCount: identCount, literalCount, keywordCount, operatorCount: opCount,
     punctuationCount: punctCount, commentCount, invalidCount,
     lineCount, maxTokenLength, totalTokenWidth, totalTriviaWidth,
+    skippedTriviaCodeUnits,
   };
 }

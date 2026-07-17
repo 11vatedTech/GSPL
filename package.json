@@ -61,7 +61,8 @@
     "check:lexer-limit-coverage": "node --experimental-strip-types scripts/check-lexer-limit-coverage.mts",
     "check:lexer-determinism": "node --experimental-strip-types scripts/check-lexer-determinism.mts",
     "check:package-basics": "node --experimental-strip-types scripts/check-package-basics.mts",
-    "validate:lexer": "npm run typecheck:all && npm run test:text-source && npm run test:lexer && npm run check:package-basics && npm run check:package-boundaries && npm run check:token-coverage && npm run check:lexical-grammar && npm run check:lexer-limit-coverage"
+    "validate:lexer": "npm run typecheck:all && npm run test:text-source && npm run test:lexer && npm run check:package-basics && npm run check:package-boundaries && npm run check:token-coverage && npm run check:lexical-grammar && npm run check:lexer-limit-coverage",
+    "check:syntax-contract": "tsx scripts/check-syntax-contract.mts"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

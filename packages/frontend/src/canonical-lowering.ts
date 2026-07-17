@@ -9,7 +9,15 @@ import type { AuthoringProgram, AuthoringValue, AuthoringGene } from "./authorin
 
 export interface CanonicalLoweringOptions { readonly languageVersion: string; readonly domainId: string; readonly author: string; }
 export var DEFAULT_LOWERING_OPTIONS: CanonicalLoweringOptions = { languageVersion: "gspl-text/1.0", domainId: "generic", author: "gspl-frontend" };
-export interface CanonicalLoweringResult { readonly seed: CanonicalSeed | undefined; readonly diagnostics: readonly Diagnostic[]; readonly ok: boolean; }
+export interface CanonicalLoweringResult {
+  readonly seed: CanonicalSeed | undefined;
+  readonly diagnostics: readonly Diagnostic[];
+  readonly ok: boolean;
+  readonly desugaringTrace: readonly DesugaringEntry[];
+  readonly normalizationTrace: readonly NormalizationEntry[];
+}
+export interface DesugaringEntry { readonly rule: string; readonly original: string; readonly desugared: string; readonly span: { sourceId: string; start: number; end: number }; }
+export interface NormalizationEntry { readonly original: string; readonly normalized: string; }
 
 var TYPE_GENE_MAP: Record<string, GeneTypeId> = {
   "scalar": "GS-001" as GeneTypeId,
@@ -76,7 +84,7 @@ export function lowerToCanonicalSeed(program: AuthoringProgram, options: Canonic
   var diags: Diagnostic[] = [];
   if (!program.seed) {
     diags.push(makeDiagnostic({ code: "GSPL-LOWER-NO-SEED", message: "no seed declaration", severity: "error", span: { sourceId: "src:lower" as any, start: 0, end: 0 }, category: "lower", phase: "lower", canonical: true }));
-    return { seed: undefined, diagnostics: diags, ok: false };
+    return { seed: undefined, diagnostics: diags, ok: false, desugaringTrace: [], normalizationTrace: [] };
   }
   var seed = program.seed;
   var genes: Record<string, any> = {};
@@ -91,7 +99,7 @@ export function lowerToCanonicalSeed(program: AuthoringProgram, options: Canonic
     genes[g.name] = { type: geneType, value: v, confidence: g.confidence, locked: false };
   }
   if (hasFatalTypeError) {
-    return { seed: undefined, diagnostics: diags, ok: false };
+    return { seed: undefined, diagnostics: diags, ok: false, desugaringTrace: [], normalizationTrace: [] };
   }
   var capabilities: string[] = [];
   for (var j = 0; j < seed.targets.length; j++) { var tName = seed.targets[j].name; if (tName) capabilities.push(tName); }
@@ -109,6 +117,76 @@ export function lowerToCanonicalSeed(program: AuthoringProgram, options: Canonic
     rootSeed = "sha256:" + entropyHash.digest("hex");
   }
 
+  // Lower authored constraints, entropy channels, effects, budgets from seed
+  var valueRanges: any[] = [];
+  var structuralConditions: any[] = [];
+  var perfBudgets: any[] = [];
+  for (var ci = 0; ci < seed.constraints.length; ci++) {
+    var ck = seed.constraints[ci].keyword;
+    var cv = seed.constraints[ci].value;
+    if (ck === "budget" || ck === "perf") perfBudgets.push({ label: ck, value: cv });
+    else if (ck === "range" || ck === "min" || ck === "max") valueRanges.push({ constraint: ck, value: cv });
+    else structuralConditions.push({ condition: ck, value: cv });
+  }
+
+  var entropyChannels: any[] = [];
+  for (var ei = 0; ei < seed.entropy.length; ei++) {
+    entropyChannels.push({ source: seed.entropy[ei].keyword, seed: seed.entropy[ei].value || "" });
+  }
+
+  var effectPerms: any = { filesystem: "none", processExecution: false, networkAccess: false, environmentAccess: false, timeAccess: false, foreignCodeExecution: false, nativeExtensions: false, modelInference: false };
+  for (var fi = 0; fi < seed.effects.length; fi++) {
+    var ek = seed.effects[fi].keyword;
+    var ev = seed.effects[fi].value;
+    if (ek === "filesystem") effectPerms.filesystem = ev || "none";
+    else if (ek === "process" || ek === "exec") effectPerms.processExecution = ev === "true" || ev === "allow";
+    else if (ek === "network") effectPerms.networkAccess = ev === "true" || ev === "allow";
+    else if (ek === "env" || ek === "environment") effectPerms.environmentAccess = ev === "true" || ev === "allow";
+    else if (ek === "time") effectPerms.timeAccess = ev === "true" || ev === "allow";
+    else if (ek === "ffi" || ek === "foreign") effectPerms.foreignCodeExecution = ev === "true" || ev === "allow";
+    else if (ek === "native") effectPerms.nativeExtensions = ev === "true" || ev === "allow";
+    else if (ek === "inference" || ek === "model") effectPerms.modelInference = ev === "true" || ev === "allow";
+    else { diags.push(makeDiagnostic({ code: "GSPL-LOWER-UNKNOWN-EFFECT", message: "unknown effect keyword: " + ek, severity: "warning", span: { sourceId: "src:lower" as any, start: 0, end: 0 }, category: "lower", phase: "lower", canonical: true })); }
+  }
+
+  var resourceBudget: any = {};
+  for (var bi = 0; bi < seed.budget.length; bi++) {
+    var bk = seed.budget[bi].keyword;
+    var bv = seed.budget[bi].value;
+    if (bv) resourceBudget[bk] = bv;
+  }
+
+  var dependencies: any = { contextRefs: [] as any[], knowledgeRefs: [] as any[], ruleSetRefs: [] as any[], targetContracts: [] as any[] };
+  for (var ti = 0; ti < seed.targets.length; ti++) {
+    var t = seed.targets[ti];
+    if (t.name) dependencies.targetContracts.push({ name: t.name, type: t.targetType || "any" });
+  }
+
+  var desugaringTrace: DesugaringEntry[] = [];
+  var normalizationTrace: NormalizationEntry[] = [];
+
+  // Record desugaring for simple sugars (e.g., gene without type annotation → default scalar)
+  for (var di = 0; di < seed.genes.length; di++) {
+    var dg = seed.genes[di];
+    var dt = (dg as any).declaredType || "";
+    if (!dt || dt === "") {
+      desugaringTrace.push({
+        rule: "type-inference",
+        original: dg.name + " (inferred)",
+        desugared: dg.name + ": scalar",
+        span: { sourceId: "src:lower" as any, start: 0, end: 0 }
+      });
+    }
+  }
+
+  // Record normalization for every gene with non-ASCII name
+  for (var ni = 0; ni < seed.genes.length; ni++) {
+    var ng = seed.genes[ni];
+    if (ng.name !== ng.normalizedName) {
+      normalizationTrace.push({ original: ng.name, normalized: ng.normalizedName });
+    }
+  }
+
   var canonicalSeed: CanonicalSeed = {
     schema: "gspl.canonical-seed" as const,
     schemaVersion: "1.0",
@@ -116,14 +194,16 @@ export function lowerToCanonicalSeed(program: AuthoringProgram, options: Canonic
     domainProfile: { domainId: options.domainId, requiredCapabilities: capabilities, optionalCapabilities: [] },
     intent: { purpose: purpose },
     payload: { schemaVersion: "1.0", genes: genes },
-    constraints: { valueRanges: [], structuralConditions: [], targetRestrictions: [], performanceBudgets: [], compatibilityConditions: [] },
-    dependencies: { contextRefs: [], knowledgeRefs: [], ruleSetRefs: [], targetContracts: [] },
-    entropy: { algorithm: "sha256", algorithmVersion: "1.0", rootSeed: rootSeed, channels: [] },
+    constraints: { valueRanges: valueRanges, structuralConditions: structuralConditions, targetRestrictions: [], performanceBudgets: perfBudgets, compatibilityConditions: [] },
+    dependencies: dependencies,
+    entropy: { algorithm: "sha256", algorithmVersion: "1.0", rootSeed: rootSeed, channels: entropyChannels },
     lineage: { operation: "primordial", parents: [], generation: 0 },
     provenance: { author: options.author, tool: "gspl-frontend", canonVersion: options.languageVersion },
-    resourceBudget: {},
-    effectPermissions: { filesystem: "none", processExecution: false, networkAccess: false, environmentAccess: false, timeAccess: false, foreignCodeExecution: false, nativeExtensions: false, modelInference: false },
-  };  // Compute content identity using Prompt 2 canonical serializer
+    resourceBudget: resourceBudget,
+    effectPermissions: effectPerms,
+  };
+
+  // Compute content identity using Prompt 2 canonical serializer
   try {
     var canonicalBytes = canonicalizeSeed(canonicalSeed);
     var hash = createHash("sha256");
@@ -140,5 +220,5 @@ export function lowerToCanonicalSeed(program: AuthoringProgram, options: Canonic
   }
 
   diags.sort(function(a: Diagnostic, b: Diagnostic) { return a.code.localeCompare(b.code); });
-  return { seed: canonicalSeed, diagnostics: diags, ok: diags.filter(function(d: Diagnostic) { return d.severity === "error"; }).length === 0 };
+  return { seed: canonicalSeed, diagnostics: diags, ok: diags.filter(function(d: Diagnostic) { return d.severity === "error"; }).length === 0, desugaringTrace: desugaringTrace, normalizationTrace: normalizationTrace };
 }

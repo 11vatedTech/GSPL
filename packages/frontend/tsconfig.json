@@ -9,6 +9,10 @@
     { "path": "../text-source" },
     { "path": "../syntax-tree" },
     { "path": "../lexer" },
-    { "path": "../parser" }
+    { "path": "../parser" },
+    { "path": "../seed-format" },
+    { "path": "../compiler-core" },
+    { "path": "../ir-model" },
+    { "path": "../gene-protocol" }
   ]
 }

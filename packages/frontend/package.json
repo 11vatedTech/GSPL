@@ -16,6 +16,10 @@
     "@gspl/text-source": "*",
     "@gspl/syntax-tree": "*",
     "@gspl/lexer": "*",
-    "@gspl/parser": "*"
+    "@gspl/parser": "*",
+    "@gspl/seed-format": "*",
+    "@gspl/compiler-core": "*",
+    "@gspl/ir-model": "*",
+    "@gspl/gene-protocol": "*"
   }
 }

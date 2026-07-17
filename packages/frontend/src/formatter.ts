@@ -71,8 +71,14 @@ export function formatSyntaxTree(tree: SyntaxTree, options?: Partial<FormatOptio
     result += s;
   }
 
+  // Track top-level declaration boundaries for blank-line insertion
+  var isTopLevel = true;
+
   function walkNode(node: RedNode): void {
+    var wasTop = isTopLevel;
+    if (isTopLevel) isTopLevel = false;
     var prevDepth = currentDepth;
+
     for (var i = 0; i < node.children.length; i++) {
       var child = node.children[i];
       if (isRedToken(child)) {
@@ -101,6 +107,10 @@ export function formatSyntaxTree(tree: SyntaxTree, options?: Partial<FormatOptio
           if (tt.indexOf(nl) >= 0) pendingIndent = true;
         }
       } else if (isRedNode(child)) {
+        // Check if this is a top-level declaration node
+        if (wasTop && result.length > 0 && pendingIndent) {
+          emit(nl); // blank line before declaration
+        }
         walkNode(child);
       }
     }

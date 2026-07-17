@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import type { Diagnostic } from "@gspl/text-source";
 import { makeDiagnostic } from "@gspl/text-source";
 import type { CanonicalSeed } from "@gspl/seed-format";
+import { canonicalizeSeed } from "@gspl/seed-format";
 import type { GeneTypeId } from "@gspl/gene-protocol";
 import type { AuthoringProgram, AuthoringValue, AuthoringGene } from "./authoring.js";
 
@@ -122,15 +123,21 @@ export function lowerToCanonicalSeed(program: AuthoringProgram, options: Canonic
     provenance: { author: options.author, tool: "gspl-frontend", canonVersion: options.languageVersion },
     resourceBudget: {},
     effectPermissions: { filesystem: "none", processExecution: false, networkAccess: false, environmentAccess: false, timeAccess: false, foreignCodeExecution: false, nativeExtensions: false, modelInference: false },
-  };
-
-  // Compute content identity from the seed itself
-  var hash = createHash("sha256");
-  hash.update(JSON.stringify(canonicalSeed.payload));
-  hash.update(JSON.stringify(canonicalSeed.domainProfile));
-  hash.update(JSON.stringify(canonicalSeed.intent));
-  hash.update(JSON.stringify(canonicalSeed.entropy));
-  canonicalSeed.identity.contentId = "sha256:" + hash.digest("hex");
+  };  // Compute content identity using Prompt 2 canonical serializer
+  try {
+    var canonicalBytes = canonicalizeSeed(canonicalSeed);
+    var hash = createHash("sha256");
+    hash.update(canonicalBytes);
+    canonicalSeed.identity.contentId = "sha256:" + hash.digest("hex");
+  } catch (e) {
+    // Fallback: use structured fields
+    var hash = createHash("sha256");
+    hash.update(JSON.stringify(canonicalSeed.payload));
+    hash.update(JSON.stringify(canonicalSeed.domainProfile));
+    hash.update(JSON.stringify(canonicalSeed.intent));
+    hash.update(JSON.stringify(canonicalSeed.entropy));
+    canonicalSeed.identity.contentId = "sha256:" + hash.digest("hex");
+  }
 
   diags.sort(function(a: Diagnostic, b: Diagnostic) { return a.code.localeCompare(b.code); });
   return { seed: canonicalSeed, diagnostics: diags, ok: diags.filter(function(d: Diagnostic) { return d.severity === "error"; }).length === 0 };

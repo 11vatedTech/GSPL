@@ -31,4 +31,18 @@ export default defineWorkspace([
       },
     },
   },
+  {
+    extends: './vitest.config.ts',
+    test: {
+      name: 'syntax-tree',
+      include: ['packages/syntax-tree/**/*.test.ts'],
+      environment: 'node',
+    },
+    resolve: {
+      alias: {
+        '@gspl/text-source': packageAlias('text-source'),
+        '@gspl/syntax-tree': packageAlias('syntax-tree'),
+      },
+    },
+  },
 ]);

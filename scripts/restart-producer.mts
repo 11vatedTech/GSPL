@@ -12,7 +12,7 @@ import { canonicalizeSeed, computeSeedHash, type CanonicalSeed } from '@gspl/see
 import {
   fixtureSoftwareArchitecture, fixtureInteractiveScene, fixtureMixedVideoGame,
   fixturePackageBacked, fixtureGeneExtension,
-} from '../packages/compiler-core/src/fixtures.ts';
+} from '@gspl/compiler-core';
 
 const fixtureId = process.argv[2];
 const outDir = resolve(process.argv[3] || '.restart-out');

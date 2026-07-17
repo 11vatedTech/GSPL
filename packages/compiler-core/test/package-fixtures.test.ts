@@ -1,6 +1,6 @@
 /** Package fixture tests — Prompt 2 §5 */
 import { describe, it, expect } from "vitest";
-import { createPackageResolver } from "../../package-resolver/src/resolver.js";
+import { createPackageResolver } from "@gspl/package-resolver";
 import { makePrimordialSeed } from "@gspl/seed-format";
 import { runPipeline, createCompilerContext } from "../src/pipeline.js";
 
@@ -93,7 +93,7 @@ describe("Package Fixtures", function() {
     r.registerPackage(pkg);
     var result = r.resolve(pkg.coordinate, 0);
     expect(result.ok).toBe(false);
-    expect(result.errors.some(function(e) { return e.code === "HASH_MISMATCH"; })).toBe(true);
+    expect(result.errors.some(function(e: { code: string }) { return e.code === "HASH_MISMATCH"; })).toBe(true);
   });
 
   it("all four package kinds can coexist", function() {

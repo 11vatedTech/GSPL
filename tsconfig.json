@@ -29,7 +29,13 @@
     "baseUrl": ".",
     "paths": {
       "@gspl/text-source": ["./packages/text-source/src/index.ts"],
-      "@gspl/syntax-tree": ["./packages/syntax-tree/src/index.ts"]
+      "@gspl/text-source/*": ["./packages/text-source/src/*"],
+      "@gspl/syntax-tree": ["./packages/syntax-tree/src/index.ts"],
+      "@gspl/syntax-tree/*": ["./packages/syntax-tree/src/*"],
+      "@gspl/compiler-core": ["./packages/compiler-core/src/index.ts"],
+      "@gspl/compiler-core/*": ["./packages/compiler-core/src/*"],
+      "@gspl/package-resolver": ["./packages/package-resolver/src/index.ts"],
+      "@gspl/package-resolver/*": ["./packages/package-resolver/src/*"]
     }
   },
   "include": ["packages/*/src/**/*.ts", "packages/*/test/**/*.ts", "tools/*/src/**/*.ts", "tools/*/test/**/*.ts", "scripts/**/*.ts", "scripts/**/*.mts", "tests/**/*.ts"],

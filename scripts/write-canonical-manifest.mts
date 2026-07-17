@@ -59,7 +59,7 @@ import {
   fixtureMixedVideoGame,
   fixturePackageBacked,
   fixtureGeneExtension,
-} from '../packages/compiler-core/src/fixtures.ts';
+} from '@gspl/compiler-core';
 
 // ─── Argv + constants ──────────────────────────────────────────────────────
 

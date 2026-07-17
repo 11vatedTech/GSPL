@@ -61,6 +61,8 @@ export {
   fixtureSoftwareArchitecture,
   fixtureInteractiveScene,
   fixtureMixedVideoGame,
+  fixturePackageBacked,
+  fixtureGeneExtension,
 } from './fixtures.js';
 
 // IR Reconstruction

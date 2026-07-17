@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { createCompilerContext, reconstructSeedFromIr } from '@gspl/compiler-core';
-import type { ReconstructDiagnostic, ReconstructDiagnosticCode, ReconstructDiagnosticCategory, ReconstructDiagnosticSeverity } from '../packages/compiler-core/src/ir-reconstructor.ts';
+import type { ReconstructDiagnostic, ReconstructDiagnosticCode, ReconstructDiagnosticCategory, ReconstructDiagnosticSeverity } from '@gspl/compiler-core';
 import { canonicalizeSeed, computeSeedHash } from '@gspl/seed-format';
 import { createIrGraph, addNode } from '@gspl/ir-model';
 import type { GsplIrNode, ProvenanceChain } from '@gspl/ir-model';

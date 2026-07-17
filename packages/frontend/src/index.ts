@@ -7,3 +7,5 @@ export * from './ast-types.js';
 export * from './ast-lowering.js';
 export * from './module-resolver.js';
 export * from './binding.js';
+
+export * from "./authoring.js";

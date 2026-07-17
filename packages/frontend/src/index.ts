@@ -14,3 +14,4 @@ export * from "./canonical-lowering.js";
 export * from "./ir-lowering.js";
 export * from "./diagnostic-registry.js";
 export * from "./provenance.js";
+export * from "./formatter.js";

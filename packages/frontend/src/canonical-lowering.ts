@@ -1,25 +1,129 @@
 /** Canonical lowering — Authoring -> CanonicalSeed. Prompt 3 §16. */
+import { createHash } from "node:crypto";
 import type { Diagnostic } from "@gspl/text-source";
 import { makeDiagnostic } from "@gspl/text-source";
-import type { CanonicalSeed, SeedIdentity } from "@gspl/seed-format";
-import type { AuthoringProgram, AuthoringValue } from "./authoring.js";
+import type { CanonicalSeed } from "@gspl/seed-format";
+import type { GeneTypeId } from "@gspl/gene-protocol";
+import type { AuthoringProgram, AuthoringValue, AuthoringGene } from "./authoring.js";
 
 export interface CanonicalLoweringOptions { readonly languageVersion: string; readonly domainId: string; readonly author: string; }
 export var DEFAULT_LOWERING_OPTIONS: CanonicalLoweringOptions = { languageVersion: "gspl-text/1.0", domainId: "generic", author: "gspl-frontend" };
 export interface CanonicalLoweringResult { readonly seed: CanonicalSeed | undefined; readonly diagnostics: readonly Diagnostic[]; readonly ok: boolean; }
 
-function mapTypeToGeneType(tn: string): any { var m = tn.toLowerCase(); if (m==="scalar"||m==="integer"||m==="float") return "GS-001"; if(m==="string") return "GS-002"; if(m==="boolean") return "GS-003"; if(m==="absence") return "GS-004"; return "GS-001"; }
-function avToAny(v: AuthoringValue): unknown { if(v.kind==="literal"){ if(v.literalKind==="integer") return parseInt(v.text,10); if(v.literalKind==="float")return parseFloat(v.text); if(v.literalKind==="boolean")return v.text==="true"; if(v.literalKind==="absence")return null; return v.text; } if(v.kind==="identifier")return v.name; if(v.kind==="binary")return{op:v.operator,left:avToAny(v.left),right:avToAny(v.right)}; if(v.kind==="unary")return{op:v.operator,operand:avToAny(v.operand)}; if(v.kind==="list"){ var a:unknown[]=[]; for(var i=0;i<v.elements.length;i++)a.push(avToAny(v.elements[i])); return a; } if(v.kind==="record"){ var r:Record<string,unknown>={}; for(var j=0;j<v.fields.length;j++)r[v.fields[j].name]=avToAny(v.fields[j].value); return r; } return undefined; }
+var TYPE_GENE_MAP: Record<string, GeneTypeId> = {
+  "scalar": "GS-001" as GeneTypeId,
+  "integer": "GS-001" as GeneTypeId,
+  "float": "GS-001" as GeneTypeId,
+  "string": "GS-002" as GeneTypeId,
+  "boolean": "GS-003" as GeneTypeId,
+  "absence": "GS-004" as GeneTypeId,
+};
+
+function mapTypeToGeneType(tn: string, diags: Diagnostic[]): GeneTypeId {
+  var m = tn.toLowerCase();
+  var mapped = TYPE_GENE_MAP[m];
+  if (mapped) return mapped;
+  diags.push(makeDiagnostic({
+    code: "GSPL-LOWER-UNKNOWN-TYPE",
+    message: "unknown type \"" + tn + "\" in canonical lowering, using GS-001 (scalar) as fallback",
+    severity: "warning",
+    span: { sourceId: "src:lower" as any, start: 0, end: 0 },
+    category: "lower", phase: "lower", canonical: true,
+  }));
+  return "GS-001" as GeneTypeId;
+}
+
+function parseInteger(text: string, diags: Diagnostic[]): number {
+  if (text.startsWith("0x") || text.startsWith("0X")) return parseInt(text, 16);
+  if (text.startsWith("0b") || text.startsWith("0B")) return parseInt(text.slice(2), 2);
+  if (text.startsWith("0o") || text.startsWith("0O")) return parseInt(text.slice(2), 8);
+  return parseInt(text, 10);
+}
+
+function parseFloatSafe(text: string, diags: Diagnostic[]): number {
+  if (text === "Infinity" || text === "-Infinity" || text === "NaN") {
+    diags.push(makeDiagnostic({
+      code: "GSPL-LOWER-NONFINITE-NUMERIC",
+      message: "non-finite numeric literal \"" + text + "\" in canonical lowering",
+      severity: "error",
+      span: { sourceId: "src:lower" as any, start: 0, end: 0 },
+      category: "lower", phase: "lower", canonical: true,
+    }));
+    return 0;
+  }
+  return parseFloat(text);
+}
+
+function avToAny(v: AuthoringValue, diags: Diagnostic[]): unknown {
+  if (v.kind === "literal") {
+    if (v.literalKind === "integer") return parseInteger(v.text, diags);
+    if (v.literalKind === "float") return parseFloatSafe(v.text, diags);
+    if (v.literalKind === "boolean") return v.text === "true";
+    if (v.literalKind === "absence") return null;
+    return v.text;
+  }
+  if (v.kind === "identifier") return v.name;
+  if (v.kind === "binary") return { op: v.operator, left: avToAny(v.left, diags), right: avToAny(v.right, diags) };
+  if (v.kind === "unary") return { op: v.operator, operand: avToAny(v.operand, diags) };
+  if (v.kind === "list") { var a: unknown[] = []; for (var i = 0; i < v.elements.length; i++) a.push(avToAny(v.elements[i], diags)); return a; }
+  if (v.kind === "record") { var r: Record<string, unknown> = {}; for (var j = 0; j < v.fields.length; j++) r[v.fields[j].name] = avToAny(v.fields[j].value, diags); return r; }
+  return undefined;
+}
 
 export function lowerToCanonicalSeed(program: AuthoringProgram, options: CanonicalLoweringOptions = DEFAULT_LOWERING_OPTIONS): CanonicalLoweringResult {
   var diags: Diagnostic[] = [];
-  if (!program.seed) { diags.push(makeDiagnostic({ code: "GSPL-LOWER-NO-SEED", message: "no seed declaration", severity: "error", span: { sourceId: "src:lower" as any, start: 0, end: 0 }, category: "lower", phase: "lower", canonical: true })); return { seed: undefined, diagnostics: diags, ok: false }; }
+  if (!program.seed) {
+    diags.push(makeDiagnostic({ code: "GSPL-LOWER-NO-SEED", message: "no seed declaration", severity: "error", span: { sourceId: "src:lower" as any, start: 0, end: 0 }, category: "lower", phase: "lower", canonical: true }));
+    return { seed: undefined, diagnostics: diags, ok: false };
+  }
   var seed = program.seed;
   var genes: Record<string, any> = {};
-  for (var i = 0; i < seed.genes.length; i++) { var g = seed.genes[i]; var v = g.value ? avToAny(g.value) : undefined; genes[g.name] = { type: mapTypeToGeneType(g.resolvedType || g.declaredType), value: v, confidence: g.confidence, locked: false }; }
-  var capabilities: string[] = []; for (var j = 0; j < seed.targets.length; j++) { if (seed.targets[j].name) capabilities.push(seed.targets[j].name!); }
-  var purpose = ""; for (var k = 0; k < seed.clauses.length; k++) { if (seed.clauses[k].keyword === "purpose" && seed.clauses[k].value) purpose = seed.clauses[k].value!; }
-  var canonicalSeed: CanonicalSeed = { schema: "gspl.canonical-seed" as const, schemaVersion: "1.0", identity: { contentId: "" }, domainProfile: { domainId: options.domainId, requiredCapabilities: capabilities, optionalCapabilities: [] }, intent: { purpose: purpose }, payload: { schemaVersion: "1.0", genes: genes }, constraints: { valueRanges: [], structuralConditions: [], targetRestrictions: [], performanceBudgets: [], compatibilityConditions: [] }, dependencies: { contextRefs: [], knowledgeRefs: [], ruleSetRefs: [], targetContracts: [] }, entropy: { algorithm: "sha256", algorithmVersion: "1.0", rootSeed: "", channels: [] }, lineage: { operation: "primordial", parents: [], generation: 0 }, provenance: { author: options.author, tool: "gspl-frontend", canonVersion: options.languageVersion }, resourceBudget: {}, effectPermissions: { filesystem: "none", processExecution: false, networkAccess: false, environmentAccess: false, timeAccess: false, foreignCodeExecution: false, nativeExtensions: false, modelInference: false } };
+  for (var i = 0; i < seed.genes.length; i++) {
+    var g = seed.genes[i];
+    var v = g.value ? avToAny(g.value, diags) : undefined;
+    var declaredType = (g as any).resolvedType || (g as any).declaredType || "scalar";
+    genes[g.name] = { type: mapTypeToGeneType(declaredType, diags), value: v, confidence: g.confidence, locked: false };
+  }
+  var capabilities: string[] = [];
+  for (var j = 0; j < seed.targets.length; j++) { var tName = seed.targets[j].name; if (tName) capabilities.push(tName); }
+  var purpose = "";
+  for (var k = 0; k < seed.clauses.length; k++) { if (seed.clauses[k].keyword === "purpose" && seed.clauses[k].value) purpose = seed.clauses[k].value as string; }
+
+  // Derive root seed from entropy clauses if present
+  var rootSeed = "";
+  var entropyClauses = seed.entropy;
+  if (entropyClauses && entropyClauses.length > 0) {
+    var entropyHash = createHash("sha256");
+    for (var e = 0; e < entropyClauses.length; e++) {
+      entropyHash.update(entropyClauses[e].keyword + "\0" + (entropyClauses[e].value || ""));
+    }
+    rootSeed = "sha256:" + entropyHash.digest("hex");
+  }
+
+  var canonicalSeed: CanonicalSeed = {
+    schema: "gspl.canonical-seed" as const,
+    schemaVersion: "1.0",
+    identity: { contentId: "" },
+    domainProfile: { domainId: options.domainId, requiredCapabilities: capabilities, optionalCapabilities: [] },
+    intent: { purpose: purpose },
+    payload: { schemaVersion: "1.0", genes: genes },
+    constraints: { valueRanges: [], structuralConditions: [], targetRestrictions: [], performanceBudgets: [], compatibilityConditions: [] },
+    dependencies: { contextRefs: [], knowledgeRefs: [], ruleSetRefs: [], targetContracts: [] },
+    entropy: { algorithm: "sha256", algorithmVersion: "1.0", rootSeed: rootSeed, channels: [] },
+    lineage: { operation: "primordial", parents: [], generation: 0 },
+    provenance: { author: options.author, tool: "gspl-frontend", canonVersion: options.languageVersion },
+    resourceBudget: {},
+    effectPermissions: { filesystem: "none", processExecution: false, networkAccess: false, environmentAccess: false, timeAccess: false, foreignCodeExecution: false, nativeExtensions: false, modelInference: false },
+  };
+
+  // Compute content identity from the seed itself
+  var hash = createHash("sha256");
+  hash.update(JSON.stringify(canonicalSeed.payload));
+  hash.update(JSON.stringify(canonicalSeed.domainProfile));
+  hash.update(JSON.stringify(canonicalSeed.intent));
+  hash.update(JSON.stringify(canonicalSeed.entropy));
+  canonicalSeed.identity.contentId = "sha256:" + hash.digest("hex");
+
   diags.sort(function(a: Diagnostic, b: Diagnostic) { return a.code.localeCompare(b.code); });
   return { seed: canonicalSeed, diagnostics: diags, ok: diags.filter(function(d: Diagnostic) { return d.severity === "error"; }).length === 0 };
 }

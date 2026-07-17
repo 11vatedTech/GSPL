@@ -11,3 +11,4 @@ export * from './binding.js';
 export * from "./authoring.js";
 export * from "./canonical-lowering.js";
 export * from "./ir-lowering.js";
+export * from "./diagnostic-registry.js";

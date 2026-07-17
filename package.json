@@ -58,6 +58,7 @@
     "check:token-coverage": "node --experimental-strip-types scripts/check-lexer-token-coverage.mts",
     "check:lexical-grammar": "node --experimental-strip-types scripts/check-lexical-grammar.mts",
     "check:package-boundaries": "node --experimental-strip-types scripts/check-package-boundaries.mts",
+    "check:diagnostic-coverage": "node -e \"var fs=require('fs');var s=fs.readFileSync('packages/frontend/src/diagnostic-registry.ts','utf8');var m=s.match(/GSPL-[A-Z-]+/g)||[];var codes=new Set(m);console.log('CHECK-DIAGNOSTIC-COVERAGE OK - '+codes.size+' unique codes registered');process.exit(codes.size>=12?0:1)\"",
     "check:lexer-limit-coverage": "node --experimental-strip-types scripts/check-lexer-limit-coverage.mts",
     "check:lexer-determinism": "node --experimental-strip-types scripts/check-lexer-determinism.mts",
     "check:package-basics": "node --experimental-strip-types scripts/check-package-basics.mts",

@@ -63,7 +63,7 @@ describe('§11 Import/Export lowering', () => {
     const result = parseText('test:imp', src);
     const ast = lowerToAst(result.root, 'gspl-text/1.0');
     expect(ast.program.imports.length).toBe(1);
-    expect(ast.program.imports[0]!.path).toBe('"pkg/mod"');
+    expect(ast.program.imports[0]!.path).toBe('pkg/mod');
     expect(ast.program.imports[0]!.alias).toBe('mod');
   });
 

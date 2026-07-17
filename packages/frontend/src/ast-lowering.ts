@@ -338,7 +338,11 @@ function lowerImportDecl(node: RedNode, ctx: LoweringContext): ImportDeclNode {
   ctx.trackNode();
   const children = node.children;
   const pathTok = asRedToken(children[1]);
-  const path = pathTok ? pathTok.text : '';
+  let path = pathTok ? pathTok.text : '';
+  // Strip surrounding quotes from string literals ("..." → ...)
+  if ((path.startsWith('"') && path.endsWith('"')) || (path.startsWith("'") && path.endsWith("'"))) {
+    path = path.slice(1, -1);
+  }
 
   // Check for `as` alias
   let alias: string | undefined;
@@ -688,6 +692,16 @@ export function lowerToAst(tree: SyntaxTree, languageVersion: string, parserDiag
         exports.push(lowerExportDecl(node, ctx));
         break;
       case SyntaxKind.SeedDeclaration:
+        // Collect imports/exports from seed body before lowering
+        for (const seedChild of node.children) {
+          const sc = asRedNode(seedChild);
+          if (!sc) continue;
+          if (sc.kind === SyntaxKind.ImportDeclaration) {
+            imports.push(lowerImportDecl(sc, ctx));
+          } else if (sc.kind === SyntaxKind.ExportDeclaration) {
+            exports.push(lowerExportDecl(sc, ctx));
+          }
+        }
         seed = lowerSeedDecl(node, ctx);
         break;
       case SyntaxKind.GeneDeclaration:

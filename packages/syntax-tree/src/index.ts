@@ -46,3 +46,14 @@ export {
   printRedToken,
   printTrivia,
 } from './print-cst.js';
+export {
+  SyntaxNode,
+  CompilationUnitSyntax,
+  SeedDeclarationSyntax,
+  GeneDeclarationSyntax,
+  ImportDeclarationSyntax,
+  ExportDeclarationSyntax,
+  ExpressionSyntax,
+  TypeExpressionSyntax,
+  getCompilationUnit,
+} from './typed-accessors.js';

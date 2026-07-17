@@ -1,0 +1,20 @@
+{
+  "schema": "gspl.frontend-limit-coverage",
+  "schemaVersion": "1.0",
+  "languageVersion": "gspl-text/1.0",
+  "sourceCommit": "0d16231",
+  "limits": [
+    {"name":"maxSourceBytes","unit":"bytes","default":10485760,"status":"ENFORCED","testFile":"packages/text-source/test/source-document.test.ts"},
+    {"name":"maxDecodedCodeUnits","unit":"code-units","default":10000000,"status":"ENFORCED","testFile":"packages/text-source/test/source-document.test.ts"},
+    {"name":"maxLines","unit":"lines","default":1000000,"status":"ENFORCED","testFile":"packages/lexer/test/lexer.test.ts"},
+    {"name":"maxLineLength","unit":"code-units","default":10000,"status":"ENFORCED","testFile":"packages/lexer/test/lexer.test.ts"},
+    {"name":"maxIdentifierCodeUnits","unit":"code-units","default":256,"status":"ENFORCED","testFile":"packages/frontend/test/limits.test.ts"},
+    {"name":"maxStringCodeUnits","unit":"code-units","default":65536,"status":"ENFORCED","testFile":"packages/lexer/test/lexer.test.ts"},
+    {"name":"maxCommentCodeUnits","unit":"code-units","default":65536,"status":"ENFORCED","testFile":"packages/frontend/test/limits.test.ts"},
+    {"name":"maxCommentNestingDepth","unit":"depth","default":32,"status":"ENFORCED","testFile":"packages/lexer/test/lexer.test.ts"},
+    {"name":"maxNumericCodeUnits","unit":"code-units","default":256,"status":"ENFORCED","testFile":"packages/lexer/test/lexer.test.ts"},
+    {"name":"maxTriviaCodeUnits","unit":"code-units","default":131072,"status":"ENFORCED","testFile":"packages/lexer/test/lexer.test.ts"},
+    {"name":"maxTokenCount","unit":"tokens","default":1000000,"status":"ENFORCED","testFile":"packages/frontend/test/limits.test.ts"},
+    {"name":"maxDiagnostics","unit":"diagnostics","default":1000,"status":"ENFORCED","testFile":"packages/frontend/test/limits.test.ts"}
+  ]
+}
